@@ -25,6 +25,10 @@ app.get('/', (req, res) => {
   res.send("BookingCare API is running");
 });
 
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
