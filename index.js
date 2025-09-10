@@ -7,7 +7,7 @@ const bodyParser = require("body-parser");
 
 
 
-const port = process.env.PORT
+const port = process.env.PORT || 3000
 
 database.connect()
 
@@ -20,6 +20,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 viewEngine(app)
 initWebRoutes(app)
+
+app.get('/', (req, res) => {
+  res.send("BookingCare API is running");
+});
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
