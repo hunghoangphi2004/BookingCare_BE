@@ -8,6 +8,12 @@ const options = {
       title: 'Hello World',
       version: '1.0.0',
     },
+    servers: [
+      {
+        url: process.env.BASE_URL || 'http://localhost:3000',
+        description: 'API Server',
+      },
+    ],
   },
   apis: ['./routes/*.js'],
 };
