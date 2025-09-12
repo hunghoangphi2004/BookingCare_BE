@@ -1,6 +1,5 @@
 // models/User.js
 const mongoose = require('mongoose');
-const validator = require('validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -10,89 +9,76 @@ const userSchema = new mongoose.Schema({
         required: true,
         unique: true,
         lowercase: true,
-        validate: value => {
-            if (!validator.isEmail(value)) {
-                throw new Error({ error: 'Invalid Email address' });
-            }
-        }
+        trim: true
     },
     password: {
         type: String,
         required: true,
-        minLength: 6
+        minlength: 6
     },
     role: {
         type: String,
         enum: ['admin', 'doctor', 'patient'],
-        required: true
+        default: 'patient'
     },
     isActive: {
         type: Boolean,
-        default: true
+        default: function() {
+            return this.role === 'patient' ? true : false;
+        }
     },
-    isVerified: {
-        type: Boolean,
-        default: false
-    },
-    // Array lưu nhiều tokens cho multi-device login
     tokens: [{
         token: {
             type: String,
             required: true
         }
     }],
-    // Profile data dựa theo role
-    profile: {
-        type: mongoose.Schema.Types.Mixed,
-        default: {}
-    },
-    lastLoginAt: {
-        type: Date
-    }
+    lastLoginAt: Date
 }, {
     timestamps: true
 });
 
-// Hash password trước khi save
-userSchema.pre('save', async function (next) {
-    const user = this;
-    if (user.isModified('password')) {
-        user.password = await bcrypt.hash(user.password, 12);
+// Hash password
+userSchema.pre('save', async function(next) {
+    if (this.isModified('password')) {
+        this.password = await bcrypt.hash(this.password, 12);
     }
     next();
 });
 
-// Instance method: Generate auth token
+// Generate auth token
 userSchema.methods.generateAuthToken = async function() {
     const user = this;
     const token = jwt.sign(
         { _id: user._id.toString(), role: user.role }, 
         process.env.JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: '24h' }
     );
     
     user.tokens = user.tokens.concat({ token });
     await user.save();
+    
     return token;
 };
 
-// Static method: Find user by credentials
+// Find user by credentials
 userSchema.statics.findByCredentials = async (email, password) => {
     const user = await User.findOne({ email });
     
     if (!user) {
-        throw new Error('Invalid login credentials');
+        throw new Error('Invalid email or password');
     }
-
+    
     if (!user.isActive) {
-        throw new Error('Account has been deactivated');
+        throw new Error('Account is not active');
     }
-
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatch) {
-        throw new Error('Invalid login credentials');
+    
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    if (!isMatch) {
+        throw new Error('Invalid email or password');
     }
-
+    
     return user;
 };
 

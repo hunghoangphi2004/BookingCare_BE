@@ -1,335 +1,291 @@
-// routes/auth.js
+// routes/patient-auth.js
 const express = require('express');
 const AuthController = require('../controllers/auth.controller');
-const { auth, authorizeRoles } = require('../middlewares/auth.middleware');
+const { auth } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 
-// Public routes
 /**
- * @openapi
+ * @swagger
+ * components:
+ *   schemas:
+ *     PatientProfile:
+ *       type: object
+ *       required:
+ *         - firstName
+ *         - lastName
+ *         - phoneNumber
+ *       properties:
+ *         firstName:
+ *           type: string
+ *           description: Patient's first name
+ *           example: "Nguyen"
+ *         lastName:
+ *           type: string
+ *           description: Patient's last name
+ *           example: "Van A"
+ *         phoneNumber:
+ *           type: string
+ *           description: Patient's phone number
+ *           example: "0901234567"
+ *         dateOfBirth:
+ *           type: string
+ *           format: date
+ *           description: Patient's date of birth
+ *           example: "1990-01-01"
+ *         gender:
+ *           type: string
+ *           enum: [male, female, other]
+ *           description: Patient's gender
+ *           example: "male"
+ *         address:
+ *           type: string
+ *           description: Patient's address
+ *           example: "123 Nguyen Hue, District 1, Ho Chi Minh City"
+ *         emergencyContact:
+ *           type: object
+ *           properties:
+ *             name:
+ *               type: string
+ *               example: "Nguyen Van B"
+ *             phoneNumber:
+ *               type: string
+ *               example: "0907654321"
+ *             relationship:
+ *               type: string
+ *               example: "Spouse"
+ *     
+ *     PatientRegistration:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *         - profile
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Patient's email address
+ *           example: "patient@example.com"
+ *         password:
+ *           type: string
+ *           minLength: 6
+ *           description: Patient's password
+ *           example: "password123"
+ *         profile:
+ *           $ref: '#/components/schemas/PatientProfile'
+ *     
+ *     PatientLogin:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Patient's email address
+ *           example: "patient@example.com"
+ *         password:
+ *           type: string
+ *           description: Patient's password
+ *           example: "password123"
+ *     
+ *     AuthResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: true
+ *         message:
+ *           type: string
+ *           example: "Login successful"
+ *         data:
+ *           type: object
+ *           properties:
+ *             user:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   example: "507f1f77bcf86cd799439011"
+ *                 email:
+ *                   type: string
+ *                   example: "patient@example.com"
+ *                 role:
+ *                   type: string
+ *                   example: "patient"
+ *                 isActive:
+ *                   type: boolean
+ *                   example: true
+ *                 profile:
+ *                   $ref: '#/components/schemas/PatientProfile'
+ *             token:
+ *               type: string
+ *               description: JWT authentication token
+ *               example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *             expiresIn:
+ *               type: string
+ *               example: "24h"
+ *     
+ *     ErrorResponse:
+ *       type: object
+ *       properties:
+ *         success:
+ *           type: boolean
+ *           example: false
+ *         message:
+ *           type: string
+ *           example: "Validation failed"
+ *         error:
+ *           type: string
+ *           example: "Email and password are required"
+ */
+
+/**
+ * @swagger
  * /auth/register:
  *   post:
- *     summary: Đăng ký tài khoản
- *     tags:
- *       - Auth
+ *     summary: Register a new patient account
+ *     tags: [Patient Authentication]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *               - role
- *               - profile
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: doctor@example.com
- *                 description: Email của người dùng
- *               password:
- *                 type: string
- *                 minLength: 6
- *                 example: "123456"
- *                 description: Mật khẩu (tối thiểu 6 ký tự)
- *               role:
- *                 type: string
- *                 enum: [doctor, patient]
- *                 example: doctor
- *                 description: Vai trò của người dùng
- *               profile:
- *                 type: object
- *                 description: Thông tin profile (khác nhau theo role)
- *                 oneOf:
- *                   - title: Doctor Profile
- *                     properties:
- *                       firstName:
- *                         type: string
- *                         example: John
- *                         description: Tên
- *                       lastName:
- *                         type: string
- *                         example: Doe
- *                         description: Họ
- *                       specialization:
- *                         type: string
- *                         example: Cardiology
- *                         description: Chuyên khoa
- *                       licenseNumber:
- *                         type: string
- *                         example: MD123456
- *                         description: Số giấy phép hành nghề
- *                       phoneNumber:
- *                         type: string
- *                         example: "0123456789"
- *                         description: Số điện thoại
- *                   - title: Patient Profile
- *                     properties:
- *                       firstName:
- *                         type: string
- *                         example: Jane
- *                         description: Tên
- *                       lastName:
- *                         type: string
- *                         example: Smith
- *                         description: Họ
- *                       phoneNumber:
- *                         type: string
- *                         example: "0987654321"
- *                         description: Số điện thoại
- *                       dateOfBirth:
- *                         type: string
- *                         format: date
- *                         example: "1990-01-15"
- *                         description: Ngày sinh
- *           examples:
- *             doctor:
- *               summary: Đăng ký bác sĩ
- *               value:
- *                 email: "doctor@example.com"
- *                 password: "123456"
- *                 role: "doctor"
- *                 profile:
- *                   firstName: "John"
- *                   lastName: "Doe"
- *                   specialization: "Cardiology"
- *                   licenseNumber: "MD123456"
- *                   phoneNumber: "0123456789"
- *             patient:
- *               summary: Đăng ký bệnh nhân
- *               value:
- *                 email: "patient@example.com"
- *                 password: "123456"
- *                 role: "patient"
- *                 profile:
- *                   firstName: "Jane"
- *                   lastName: "Smith"
- *                   phoneNumber: "0987654321"
- *                   dateOfBirth: "1990-01-15"
+ *             $ref: '#/components/schemas/PatientRegistration'
+ *           example:
+ *             email: "patient@example.com"
+ *             password: "password123"
+ *             profile:
+ *               firstName: "Nguyen"
+ *               lastName: "Van A"
+ *               phoneNumber: "0901234567"
+ *               dateOfBirth: "1990-01-01"
+ *               gender: "male"
+ *               address: "123 Nguyen Hue, District 1, Ho Chi Minh City"
+ *               emergencyContact:
+ *                 name: "Nguyen Van B"
+ *                 phoneNumber: "0907654321"
+ *                 relationship: "Spouse"
  *     responses:
  *       201:
- *         description: Đăng ký thành công
+ *         description: Patient registered successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "User registered successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       type: object
- *                       properties:
- *                         _id:
- *                           type: string
- *                           example: "64f5a9b8c1234567890abcde"
- *                         email:
- *                           type: string
- *                           example: "doctor@example.com"
- *                         role:
- *                           type: string
- *                           example: "doctor"
- *                         isActive:
- *                           type: boolean
- *                           example: true
- *                         createdAt:
- *                           type: string
- *                           format: date-time
- *                         profile:
- *                           type: object
- *                           description: Profile information based on role
- *                     token:
- *                       type: string
- *                       example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
- *                       description: JWT access token
+ *               $ref: '#/components/schemas/AuthResponse'
  *       400:
- *         description: Lỗi validate hoặc email đã tồn tại
+ *         description: Bad request - validation failed
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Email already exists"
- *                 error:
- *                   type: string
- *                   example: "This email is already registered. Please use a different email or try logging in."
+ *               $ref: '#/components/schemas/ErrorResponse'
  *             examples:
- *               email_exists:
- *                 summary: Email đã tồn tại
- *                 value:
- *                   success: false
- *                   message: "Email already exists"
- *                   error: "This email is already registered. Please use a different email or try logging in."
  *               missing_fields:
- *                 summary: Thiếu trường bắt buộc
+ *                 summary: Missing required fields
  *                 value:
  *                   success: false
  *                   message: "Missing required fields"
- *                   error: "Email, password and role are required"
+ *                   error: "Email, password and profile are required"
  *               invalid_email:
- *                 summary: Email không hợp lệ
+ *                 summary: Invalid email format
  *                 value:
  *                   success: false
  *                   message: "Invalid email format"
  *                   error: "Please provide valid email"
- *               weak_password:
- *                 summary: Mật khẩu quá ngắn
+ *               password_too_short:
+ *                 summary: Password too short
  *                 value:
  *                   success: false
  *                   message: "Password too short"
  *                   error: "Password must be at least 6 characters"
+ *               email_exists:
+ *                 summary: Email already registered
+ *                 value:
+ *                   success: false
+ *                   message: "Email already exists"
+ *                   error: "This email is already registered"
  *       500:
- *         description: Lỗi server
+ *         description: Internal server error
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- *                 error:
- *                   type: string
- *                   example: "Something went wrong"
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/register', AuthController.register);
+router.post('/register', AuthController.registerPatient);
 
 /**
- * @openapi
+ * @swagger
  * /auth/login:
  *   post:
- *     summary: Đăng nhập
- *     tags:
- *       - Auth
+ *     summary: Login for patients
+ *     tags: [Patient Authentication]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - email
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: "doctor@example.com"
- *                 description: Email đăng nhập
- *               password:
- *                 type: string
- *                 example: "123456"
- *                 description: Mật khẩu
- *           examples:
- *             doctor_login:
- *               summary: Đăng nhập bác sĩ
- *               value:
- *                 email: "doctor@example.com"
- *                 password: "123456"
- *             patient_login:
- *               summary: Đăng nhập bệnh nhân
- *               value:
- *                 email: "patient@example.com"
- *                 password: "123456"
+ *             $ref: '#/components/schemas/PatientLogin'
+ *           example:
+ *             email: "patient@example.com"
+ *             password: "password123"
  *     responses:
  *       200:
- *         description: Đăng nhập thành công
+ *         description: Login successful
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Login successful"
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       type: object
- *                       properties:
- *                         _id:
- *                           type: string
- *                         email:
- *                           type: string
- *                         role:
- *                           type: string
- *                         profile:
- *                           type: object
- *                           description: Profile information
- *                     token:
- *                       type: string
- *                       description: JWT access token
- *                     expiresIn:
- *                       type: string
- *                       example: "24h"
+ *               $ref: '#/components/schemas/AuthResponse'
  *       400:
- *         description: Thiếu thông tin đăng nhập
+ *         description: Bad request - missing credentials
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Missing credentials"
- *                 error:
- *                   type: string
- *                   example: "Email and password are required"
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: "Missing credentials"
+ *               error: "Email and password are required"
  *       401:
- *         description: Sai email hoặc mật khẩu
+ *         description: Unauthorized - invalid credentials
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Invalid credentials"
- *                 error:
- *                   type: string
- *                   example: "Invalid email or password"
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               invalid_credentials:
+ *                 summary: Invalid email or password
+ *                 value:
+ *                   success: false
+ *                   message: "Invalid credentials"
+ *                   error: "Invalid email or password"
+ *               inactive_account:
+ *                 summary: Account not active
+ *                 value:
+ *                   success: false
+ *                   message: "Invalid credentials"
+ *                   error: "Account is not active"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/login', AuthController.login);
 
 /**
- * @openapi
- * /auth/profile:
+ * @swagger
+ * /api/patient/profile:
  *   get:
- *     summary: Lấy thông tin profile người dùng
- *     tags:
- *       - Auth
+ *     summary: Get patient profile
+ *     tags: [Patient Authentication]
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Thông tin profile
+ *         description: Profile retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -346,25 +302,43 @@ router.post('/login', AuthController.login);
  *                   properties:
  *                     user:
  *                       type: object
- *                       description: User information with profile
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         role:
+ *                           type: string
+ *                         isActive:
+ *                           type: boolean
+ *                         profile:
+ *                           $ref: '#/components/schemas/PatientProfile'
  *       401:
- *         description: Không có quyền truy cập
+ *         description: Unauthorized - missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
-// Protected routes
 router.get('/profile', auth, AuthController.getProfile);
 
 /**
- * @openapi
- * /auth/logout:
+ * @swagger
+ * /api/patient/logout:
  *   post:
- *     summary: Đăng xuất khỏi thiết bị hiện tại
- *     tags:
- *       - Auth
+ *     summary: Logout patient
+ *     tags: [Patient Authentication]
  *     security:
- *       - bearerAuth: []
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Đăng xuất thành công
+ *         description: Logged out successfully
  *         content:
  *           application/json:
  *             schema:
@@ -376,78 +350,19 @@ router.get('/profile', auth, AuthController.getProfile);
  *                 message:
  *                   type: string
  *                   example: "Logged out successfully"
+ *       401:
+ *         description: Unauthorized - missing or invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/logout', auth, AuthController.logout);
-
-/**
- * @openapi
- * /auth/logout-all:
- *   post:
- *     summary: Đăng xuất khỏi tất cả thiết bị
- *     tags:
- *       - Auth
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Đăng xuất khỏi tất cả thiết bị thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Logged out from all devices successfully"
- */
-router.post('/logout-all', auth, AuthController.logoutAll);
-
-// Role-based routes examples
-// router.get('/doctors-only', auth, authorizeRoles('doctor'), (req, res) => {
-//     res.json({ message: 'Welcome doctor!' });
-// });
-
-/**
- * @openapi
- * /auth/admin-only:
- *   get:
- *     summary: Route chỉ dành cho admin (demo)
- *     tags:
- *       - Auth
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Chào mừng admin
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Welcome admin!"
- *       403:
- *         description: Không có quyền truy cập
- */
-router.get('/admin-only', auth, authorizeRoles('admin'), (req, res) => {
-    res.json({ 
-        success: true,
-        message: 'Welcome admin!' 
-    });
-});
-
-/**
- * @openapi
- * components:
- *   securitySchemes:
- *     bearerAuth:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- */
 
 module.exports = router;

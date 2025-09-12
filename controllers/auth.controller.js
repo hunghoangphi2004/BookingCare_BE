@@ -1,22 +1,21 @@
-// controllers/authController.js
+// controllers/auth.controller.js
 const User = require('../models/user.model');
 const DoctorProfile = require('../models/doctor.model');
 const PatientProfile = require('../models/patient.model');
-
 const validator = require('validator');
 
 class AuthController {
-    // Register new user
-    static async register(req, res) {
+    // Đăng ký bệnh nhân (public)
+    static async registerPatient(req, res) {
         try {
-            const { email, password, role, profile } = req.body;
+            const { email, password, profile } = req.body;
 
             // Validation
-            if (!email || !password || !role) {
+            if (!email || !password || !profile) {
                 return res.status(400).json({
                     success: false,
                     message: 'Missing required fields',
-                    error: 'Email, password and role are required'
+                    error: 'Email, password and profile are required'
                 });
             }
 
@@ -36,28 +35,13 @@ class AuthController {
                 });
             }
 
-            if (!['doctor', 'patient'].includes(role)) {
+            // Validate patient profile
+            const { firstName, lastName, phoneNumber } = profile;
+            if (!firstName || !lastName || !phoneNumber) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Invalid role',
-                    error: 'Role must be doctor or patient'
-                });
-            }
-
-            // Validate profile based on role
-            if (role === 'doctor' && (!profile || !profile.firstName || !profile.lastName || !profile.specialization)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Missing doctor profile information',
-                    error: 'Doctor must provide firstName, lastName, and specialization'
-                });
-            }
-
-            if (role === 'patient' && (!profile || !profile.firstName || !profile.lastName)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Missing patient profile information',
-                    error: 'Patient must provide firstName and lastName'
+                    message: 'Missing patient information',
+                    error: 'First name, last name and phone number are required'
                 });
             }
 
@@ -67,71 +51,48 @@ class AuthController {
                 return res.status(400).json({
                     success: false,
                     message: 'Email already exists',
-                    error: 'This email is already registered. Please use a different email or try logging in.'
+                    error: 'This email is already registered'
                 });
             }
 
-            // Create user
-            const user = new User({ email, password, role });
+            // Create user (role = patient by default)
+            const user = new User({ 
+                email, 
+                password, 
+                role: 'patient' 
+            });
             await user.save();
 
-            // Create profile based on role
-            let userProfile = null;
-            if (role === 'doctor' && profile) {
-                const doctorProfile = new DoctorProfile({
-                    userId: user._id,
-                    ...profile
-                });
-                await doctorProfile.save();
-                userProfile = doctorProfile;
-            } else if (role === 'patient' && profile) {
-                const patientProfile = new PatientProfile({
-                    userId: user._id,
-                    ...profile
-                });
-                await patientProfile.save();
-                userProfile = patientProfile;
-            }
+            // Create patient profile
+            const patientProfile = new PatientProfile({
+                userId: user._id,
+                ...profile
+            });
+            await patientProfile.save();
 
             // Generate token
             const token = await user.generateAuthToken();
 
-            // Prepare response data
-            const userData = user.toJSON();
-            delete userData.password; // Remove password from response
-            delete userData.tokens; // Remove tokens array from response
-
             res.status(201).json({
                 success: true,
-                message: 'User registered successfully',
+                message: 'Patient registered successfully',
                 data: {
                     user: {
-                        ...userData,
-                        profile: userProfile
+                        ...user.toJSON(),
+                        profile: patientProfile
                     },
                     token
                 }
             });
 
         } catch (error) {
-            console.error('Register error:', error);
+            console.error('Register patient error:', error);
             
-            // Handle duplicate key error (MongoDB)
             if (error.code === 11000) {
                 return res.status(400).json({
                     success: false,
                     message: 'Email already exists',
-                    error: 'This email is already registered. Please use a different email.'
-                });
-            }
-            
-            // Handle mongoose validation errors
-            if (error.name === 'ValidationError') {
-                const errors = Object.values(error.errors).map(err => err.message);
-                return res.status(400).json({
-                    success: false,
-                    message: 'Validation error',
-                    error: errors.join(', ')
+                    error: 'This email is already registered'
                 });
             }
             
@@ -143,7 +104,121 @@ class AuthController {
         }
     }
 
-    // Login user
+    // Admin tạo tài khoản bác sĩ
+    static async createDoctor(req, res) {
+        try {
+            const { email, password, profile } = req.body;
+
+            // Validation
+            if (!email || !password || !profile) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing required fields',
+                    error: 'Email, password and profile are required'
+                });
+            }
+
+            if (!validator.isEmail(email)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid email format',
+                    error: 'Please provide valid email'
+                });
+            }
+
+            // Validate doctor profile
+            const { firstName, lastName, specialization } = profile;
+            if (!firstName || !lastName || !specialization) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing doctor information',
+                    error: 'First name, last name and specialization are required'
+                });
+            }
+
+            // Check if user already exists
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Email already exists',
+                    error: 'This email is already registered'
+                });
+            }
+
+            // Create user
+            const user = new User({ 
+                email, 
+                password, 
+                role: 'doctor',
+                isActive: false // Chờ admin kích hoạt
+            });
+            await user.save();
+
+            // Create doctor profile
+            const doctorProfile = new DoctorProfile({
+                userId: user._id,
+                ...profile
+            });
+            await doctorProfile.save();
+
+            res.status(201).json({
+                success: true,
+                message: 'Doctor account created successfully',
+                data: {
+                    user: {
+                        ...user.toJSON(),
+                        profile: doctorProfile
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error('Create doctor error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                error: error.message
+            });
+        }
+    }
+
+    // Kích hoạt tài khoản bác sĩ
+    static async activateDoctor(req, res) {
+        try {
+            const { userId } = req.params;
+
+            const user = await User.findById(userId);
+            if (!user || user.role !== 'doctor') {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Doctor not found',
+                    error: 'Invalid doctor ID'
+                });
+            }
+
+            user.isActive = true;
+            await user.save();
+
+            res.json({
+                success: true,
+                message: 'Doctor account activated successfully',
+                data: {
+                    user: user.toJSON()
+                }
+            });
+
+        } catch (error) {
+            console.error('Activate doctor error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                error: error.message
+            });
+        }
+    }
+
+    // Đăng nhập chung
     static async login(req, res) {
         try {
             const { email, password } = req.body;
@@ -163,7 +238,7 @@ class AuthController {
             user.lastLoginAt = new Date();
             await user.save();
 
-            // Get user profile
+            // Get profile based on role
             let profile = null;
             if (user.role === 'doctor') {
                 profile = await DoctorProfile.findOne({ userId: user._id });
@@ -171,17 +246,12 @@ class AuthController {
                 profile = await PatientProfile.findOne({ userId: user._id });
             }
 
-            // Prepare response data
-            const userData = user.toJSON();
-            delete userData.password;
-            delete userData.tokens;
-
             res.json({
                 success: true,
                 message: 'Login successful',
                 data: {
                     user: {
-                        ...userData,
+                        ...user.toJSON(),
                         profile
                     },
                     token,
@@ -199,7 +269,7 @@ class AuthController {
         }
     }
 
-    // Get user profile
+    // Get profile
     static async getProfile(req, res) {
         try {
             const user = req.user;
@@ -211,17 +281,12 @@ class AuthController {
                 profile = await PatientProfile.findOne({ userId: user._id });
             }
 
-            // Prepare response data
-            const userData = user.toJSON();
-            delete userData.password;
-            delete userData.tokens;
-
             res.json({
                 success: true,
                 message: 'Profile retrieved successfully',
                 data: {
                     user: {
-                        ...userData,
+                        ...user.toJSON(),
                         profile
                     }
                 }
@@ -236,7 +301,7 @@ class AuthController {
         }
     }
 
-    // Logout from current device
+    // Logout
     static async logout(req, res) {
         try {
             req.user.tokens = req.user.tokens.filter((tokenObj) => {
@@ -259,21 +324,37 @@ class AuthController {
         }
     }
 
-    // Logout from all devices
-    static async logoutAll(req, res) {
+    // Get pending doctors (admin only)
+    static async getPendingDoctors(req, res) {
         try {
-            req.user.tokens = [];
-            await req.user.save();
-            
+            const pendingDoctors = await User.find({ 
+                role: 'doctor', 
+                isActive: false 
+            }).select('-password -tokens');
+
+            const doctorsWithProfiles = await Promise.all(
+                pendingDoctors.map(async (doctor) => {
+                    const profile = await DoctorProfile.findOne({ userId: doctor._id });
+                    return {
+                        ...doctor.toJSON(),
+                        profile
+                    };
+                })
+            );
+
             res.json({
                 success: true,
-                message: 'Logged out from all devices successfully'
+                message: 'Pending doctors retrieved successfully',
+                data: {
+                    doctors: doctorsWithProfiles
+                }
             });
+
         } catch (error) {
-            console.error('Logout all error:', error);
+            console.error('Get pending doctors error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Logout from all devices failed',
+                message: 'Internal server error',
                 error: error.message
             });
         }

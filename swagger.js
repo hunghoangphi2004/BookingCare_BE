@@ -1,4 +1,5 @@
 const swaggerJsdoc = require('swagger-jsdoc');
+const path = require("path");
 
 const options = {
   failOnErrors: true, // Whether or not to throw when parsing errors. Defaults to false.
@@ -15,7 +16,7 @@ const options = {
       },
     ],
   },
-  apis: ['./routes/*.js'],
+  apis: [path.join(__dirname, './routes/*.js')],
 };
 
 const openapiSpecification = swaggerJsdoc(options);
