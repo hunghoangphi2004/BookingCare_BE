@@ -1,364 +1,274 @@
-// controllers/auth.controller.js
-const User = require('../models/user.model');
-const DoctorProfile = require('../models/doctor.model');
-const PatientProfile = require('../models/patient.model');
-const validator = require('validator');
+const User = require('../models/user.model.js')
+const OTP = require('../models/otp.model.js')
+const bcrypt = require("bcryptjs")
+const jwt = require('jsonwebtoken')
+const validator = require('validator')
+const nodemailer = require('nodemailer')
+const otpGenerator = require('otp-generator')
 
-class AuthController {
-    // Đăng ký bệnh nhân (public)
-    static async registerPatient(req, res) {
-        try {
-            const { email, password, profile } = req.body;
+module.exports.getAllUsers = async (req, res) => {
+    try {
+        const result = await User.find()
 
-            // Validation
-            if (!email || !password || !profile) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Missing required fields',
-                    error: 'Email, password and profile are required'
-                });
-            }
-
-            if (!validator.isEmail(email)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid email format',
-                    error: 'Please provide valid email'
-                });
-            }
-
-            if (password.length < 6) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Password too short',
-                    error: 'Password must be at least 6 characters'
-                });
-            }
-
-            // Validate patient profile
-            const { firstName, lastName, phoneNumber } = profile;
-            if (!firstName || !lastName || !phoneNumber) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Missing patient information',
-                    error: 'First name, last name and phone number are required'
-                });
-            }
-
-            // Check if user already exists
-            const existingUser = await User.findOne({ email });
-            if (existingUser) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Email already exists',
-                    error: 'This email is already registered'
-                });
-            }
-
-            // Create user (role = patient by default)
-            const user = new User({ 
-                email, 
-                password, 
-                role: 'patient' 
-            });
-            await user.save();
-
-            // Create patient profile
-            const patientProfile = new PatientProfile({
-                userId: user._id,
-                ...profile
-            });
-            await patientProfile.save();
-
-            // Generate token
-            const token = await user.generateAuthToken();
-
-            res.status(201).json({
-                success: true,
-                message: 'Patient registered successfully',
-                data: {
-                    user: {
-                        ...user.toJSON(),
-                        profile: patientProfile
-                    },
-                    token
-                }
-            });
-
-        } catch (error) {
-            console.error('Register patient error:', error);
-            
-            if (error.code === 11000) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Email already exists',
-                    error: 'This email is already registered'
-                });
-            }
-            
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error',
-                error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-            });
-        }
+        res.status(200).json({ result, message: 'all users get successfully', success: true })
     }
-
-    // Admin tạo tài khoản bác sĩ
-    static async createDoctor(req, res) {
-        try {
-            const { email, password, profile } = req.body;
-
-            // Validation
-            if (!email || !password || !profile) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Missing required fields',
-                    error: 'Email, password and profile are required'
-                });
-            }
-
-            if (!validator.isEmail(email)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid email format',
-                    error: 'Please provide valid email'
-                });
-            }
-
-            // Validate doctor profile
-            const { firstName, lastName, specialization } = profile;
-            if (!firstName || !lastName || !specialization) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Missing doctor information',
-                    error: 'First name, last name and specialization are required'
-                });
-            }
-
-            // Check if user already exists
-            const existingUser = await User.findOne({ email });
-            if (existingUser) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Email already exists',
-                    error: 'This email is already registered'
-                });
-            }
-
-            // Create user
-            const user = new User({ 
-                email, 
-                password, 
-                role: 'doctor',
-                isActive: false // Chờ admin kích hoạt
-            });
-            await user.save();
-
-            // Create doctor profile
-            const doctorProfile = new DoctorProfile({
-                userId: user._id,
-                ...profile
-            });
-            await doctorProfile.save();
-
-            res.status(201).json({
-                success: true,
-                message: 'Doctor account created successfully',
-                data: {
-                    user: {
-                        ...user.toJSON(),
-                        profile: doctorProfile
-                    }
-                }
-            });
-
-        } catch (error) {
-            console.error('Create doctor error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error',
-                error: error.message
-            });
-        }
-    }
-
-    // Kích hoạt tài khoản bác sĩ
-    static async activateDoctor(req, res) {
-        try {
-            const { userId } = req.params;
-
-            const user = await User.findById(userId);
-            if (!user || user.role !== 'doctor') {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Doctor not found',
-                    error: 'Invalid doctor ID'
-                });
-            }
-
-            user.isActive = true;
-            await user.save();
-
-            res.json({
-                success: true,
-                message: 'Doctor account activated successfully',
-                data: {
-                    user: user.toJSON()
-                }
-            });
-
-        } catch (error) {
-            console.error('Activate doctor error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error',
-                error: error.message
-            });
-        }
-    }
-
-    // Đăng nhập chung
-    static async login(req, res) {
-        try {
-            const { email, password } = req.body;
-
-            if (!email || !password) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Missing credentials',
-                    error: 'Email and password are required'
-                });
-            }
-
-            const user = await User.findByCredentials(email, password);
-            const token = await user.generateAuthToken();
-
-            // Update last login
-            user.lastLoginAt = new Date();
-            await user.save();
-
-            // Get profile based on role
-            let profile = null;
-            if (user.role === 'doctor') {
-                profile = await DoctorProfile.findOne({ userId: user._id });
-            } else if (user.role === 'patient') {
-                profile = await PatientProfile.findOne({ userId: user._id });
-            }
-
-            res.json({
-                success: true,
-                message: 'Login successful',
-                data: {
-                    user: {
-                        ...user.toJSON(),
-                        profile
-                    },
-                    token,
-                    expiresIn: '24h'
-                }
-            });
-
-        } catch (error) {
-            console.error('Login error:', error);
-            res.status(401).json({
-                success: false,
-                message: 'Invalid credentials',
-                error: error.message
-            });
-        }
-    }
-
-    // Get profile
-    static async getProfile(req, res) {
-        try {
-            const user = req.user;
-            let profile = null;
-
-            if (user.role === 'doctor') {
-                profile = await DoctorProfile.findOne({ userId: user._id });
-            } else if (user.role === 'patient') {
-                profile = await PatientProfile.findOne({ userId: user._id });
-            }
-
-            res.json({
-                success: true,
-                message: 'Profile retrieved successfully',
-                data: {
-                    user: {
-                        ...user.toJSON(),
-                        profile
-                    }
-                }
-            });
-        } catch (error) {
-            console.error('Get profile error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error',
-                error: error.message
-            });
-        }
-    }
-
-    // Logout
-    static async logout(req, res) {
-        try {
-            req.user.tokens = req.user.tokens.filter((tokenObj) => {
-                return tokenObj.token !== req.token;
-            });
-            
-            await req.user.save();
-            
-            res.json({
-                success: true,
-                message: 'Logged out successfully'
-            });
-        } catch (error) {
-            console.error('Logout error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Logout failed',
-                error: error.message
-            });
-        }
-    }
-
-    // Get pending doctors (admin only)
-    static async getPendingDoctors(req, res) {
-        try {
-            const pendingDoctors = await User.find({ 
-                role: 'doctor', 
-                isActive: false 
-            }).select('-password -tokens');
-
-            const doctorsWithProfiles = await Promise.all(
-                pendingDoctors.map(async (doctor) => {
-                    const profile = await DoctorProfile.findOne({ userId: doctor._id });
-                    return {
-                        ...doctor.toJSON(),
-                        profile
-                    };
-                })
-            );
-
-            res.json({
-                success: true,
-                message: 'Pending doctors retrieved successfully',
-                data: {
-                    doctors: doctorsWithProfiles
-                }
-            });
-
-        } catch (error) {
-            console.error('Get pending doctors error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Internal server error',
-                error: error.message
-            });
-        }
+    catch (error) {
+        res.status(404).json({ message: 'error in getAllUsers - controllers/user.js', error, success: false })
     }
 }
 
-module.exports = AuthController;
+module.exports.sendRegisterOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: 'email field is required', success: false })
+        if (!validator.isEmail(email)) return res.status(400).json({ message: `email pattern failed. Please provide a valid email.`, success: false })
+
+
+        const isEmailAlreadyReg = await User.findOne({ email })
+        // in register user should not be registered already
+        if (isEmailAlreadyReg) return res.status(400).json({ message: `user with email ${email} already resgistered `, success: false })
+
+
+        const otp = otpGenerator.generate(6, { digits: true, lowerCaseAlphabets: false, upperCaseAlphabets: false, specialChars: false })
+        const hashedOTP = await bcrypt.hash(otp, 12)
+        const newOTP = await OTP.create({ email, otp: hashedOTP, name: 'register_otp' })
+
+        var transporter = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Verification',
+            html: `<p>Your OTP code is ${otp}</p>`
+        };
+        transporter.sendMail(mailOptions, function (err, info) {
+            if (err) console.log(err)
+            else return null        //console.log(info);
+        });
+
+        res.status(200).json({ result: newOTP, message: 'register_otp send successfully', success: true })
+    }
+    catch (error) {
+        res.status(404).json({ message: 'error in sendRegisterOTP - controllers/user.js', error, success: false })
+    }
+}
+
+// controllers/auth.controller.js
+module.exports.register = async (req, res) => {
+    try {
+        const { email, password, otp } = req.body;
+
+        // Kiểm tra input
+        if (!email || !password || !otp) {
+            return res.status(400).json({ 
+                message: "Missing required fields", 
+                success: false 
+            });
+        }
+
+        // Kiểm tra OTP có tồn tại không
+        const otpRecord = await OTP.findOne({ email }).sort({ createdAt: -1 });
+        if (!otpRecord) {
+            return res.status(400).json({ 
+                message: "OTP not found or expired", 
+                success: false 
+            });
+        }
+
+        // So sánh OTP
+        const isValidOtp = await bcrypt.compare(otp, otpRecord.otp);
+        if (!isValidOtp) {
+            return res.status(400).json({ 
+                message: "Invalid OTP", 
+                success: false 
+            });
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Tạo user mới
+        const newUser = new User({
+            email,
+            password: hashedPassword,
+            role: "patient",
+            isActive: true
+        });
+
+        await newUser.save();
+
+        return res.status(201).json({
+            message: "User registered successfully",
+            user: newUser,
+            success: true
+        });
+    } catch (error) {
+        console.error("Register error:", error);  // 👈 in chi tiết lỗi
+        return res.status(500).json({
+            message: "error in register - controllers/user.js",
+            error: error.message,   // 👈 gửi cả error.message
+            success: false
+        });
+    }
+};
+
+
+module.exports.login = async (req, res) => {
+  try {
+    const auth_token = 'auth_token';
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: 'make sure to provide all fields (email, password)',
+        success: false
+      });
+    }
+
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({
+        message: 'email pattern failed. Please provide a valid email.',
+        success: false
+      });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (!existingUser) {
+      return res.status(400).json({ message: 'Invalid Credentials', success: false });
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(password, existingUser.password);
+    if (!isPasswordCorrect) {
+      return res.status(400).json({ message: 'Invalid Credentials', success: false });
+    }
+
+    // Kiểm tra token đã tồn tại chưa
+    const isTokenExist = existingUser.tokens?.some(t => t.name === auth_token);
+    if (isTokenExist) {
+      return res.status(201).json({
+        result: existingUser,
+        message: `user with email ${email} already logged in`,
+        success: true
+      });
+    }
+
+    // Tạo token mới
+    const token = jwt.sign(
+      { email, _id: existingUser._id },
+      process.env.JWT_SECRET
+    );
+    existingUser.tokens.push({ name: auth_token, token });
+
+    // Lưu lại
+    const result = await existingUser.save();
+
+    res.status(200).json({ result, message: 'login successfully', success: true });
+  } catch (error) {
+    res.status(500).json({
+      message: 'login failed - controllers/user.js',
+      error: error.message,
+      success: false
+    });
+  }
+};
+
+
+module.exports.sendForgetPasswordOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const isEmailAlreadyReg = await User.findOne({ email })
+
+        if (!email) return res.status(400).json({ message: 'email field is required', success: false })
+        // in forget password route, user should be registered already
+        if (!isEmailAlreadyReg) return res.status(400).json({ message: `no user exist with email ${email}`, success: false })
+        if (!validator.isEmail(email)) return res.status(400).json({ message: `email pattern failed. Please provide a valid email.`, success: false })
+
+        const otp = otpGenerator.generate(6, { digits: true, lowerCaseAlphabets: false, upperCaseAlphabets: false, specialChars: false })
+        const hashedOTP = await bcrypt.hash(otp, 12)
+        const newOTP = await OTP.create({ email, otp: hashedOTP, name: 'forget_password_otp' })
+
+        var transporter = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Verification',
+            html: `<p>Your OTP code is ${otp}</p>`      // all data to be sent
+        };
+        transporter.sendMail(mailOptions, function (err, info) {
+            if (err) console.log(err)
+            else return null //console.log(info);
+        });
+
+
+        res.status(200).json({ result: newOTP, otp, message: 'forget_password_otp send successfully', success: true })
+
+    }
+    catch (error) {
+        res.status(404).json({ message: 'error in sendForgetPasswordOTP - controllers/user.js', error, success: false })
+    }
+}
+
+module.exports.changePassword = async (req, res) => {
+    try {
+
+        const { email, password, otp } = req.body
+        if (!email || !password || !otp) return res.status(400).json({ message: 'make sure to provide all the fieds ( email, password, otp)', success: false })
+        if (!validator.isEmail(email)) return res.status(400).json({ message: `email pattern failed. Please provide a valid email.`, success: false })
+
+
+        const findedUser = await User.findOne({ email })
+        if (!findedUser) return res.status(400).json({ message: `user with email ${email} is not exist `, success: false })
+
+
+        const otpHolder = await OTP.find({ email })
+        if (otpHolder.length == 0) return res.status(400).json({ message: 'you have entered an expired otp', success: false })
+
+        const forg_pass_otps = otpHolder.filter(otp => otp.name == 'forget_password_otp')         // otp may be sent multiple times to user. So there may be multiple otps with user email stored in dbs. But we need only last one.
+        const findedOTP = forg_pass_otps[forg_pass_otps.length - 1]
+
+        const plainOTP = otp
+        const hashedOTP = findedOTP.otp
+
+        const isValidOTP = await bcrypt.compare(plainOTP, hashedOTP)
+
+        if (isValidOTP) {
+            const hashedPassword = await bcrypt.hash(password, 12)
+            const result = await User.findByIdAndUpdate(findedUser._id, { name: findedUser.name, email, password: hashedPassword }, { new: true })
+
+            await OTP.deleteMany({ email: findedOTP.email })
+
+            return res.status(200).json({ result, message: 'password changed successfully', success: true })
+        }
+        else {
+            return res.status(200).json({ message: 'wrong otp', success: false })
+        }
+
+    }
+    catch (error) {
+        res.status(404).json({ message: 'error in changePassword - controllers/user.js', error, success: false })
+    }
+}
+
+// export const deleteAllUsers = async (req, res) => {
+//     try {
+
+//         const result = await User.deleteMany()
+//         res.status(200).json({ result, message: `User collection deleted successfully `, success: true })
+
+//     }
+//     catch (err) {
+//         res.status(404).json({ message: 'error in deleteAllUsers - controllers/user.js', success: false })
+//     }
+// }
