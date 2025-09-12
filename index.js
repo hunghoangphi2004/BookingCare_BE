@@ -3,6 +3,8 @@ const app = express()
 require('dotenv').config()
 const database = require('./config/database')
 const bodyParser = require("body-parser");
+const swaggerUi = require('swagger-ui-express');
+const openapiSpecification = require('./swagger');
 
 
 
@@ -20,6 +22,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 viewEngine(app)
 initWebRoutes(app)
+
+// Swagger Docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpecification));
 
 app.get('/', (req, res) => {
   res.send("BookingCare API is running");
