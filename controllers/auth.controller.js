@@ -47,8 +47,12 @@ module.exports.sendRegisterOTP = async (req, res) => {
             html: `<p>Your OTP code is ${otp}</p>`
         };
         transporter.sendMail(mailOptions, function (err, info) {
-            if (err) console.log(err)
-            else return null        //console.log(info);
+            if (err) {
+                console.error("Send mail error:", err);
+                return res.status(500).json({ message: "Email send failed", error: err, success: false });
+            } else {
+                console.log("Email sent:", info.response);
+            }
         });
 
         res.status(200).json({ result: newOTP, message: 'register_otp send successfully', success: true })
@@ -65,27 +69,27 @@ module.exports.register = async (req, res) => {
 
         // Kiểm tra input
         if (!email || !password || !otp) {
-            return res.status(400).json({ 
-                message: "Missing required fields", 
-                success: false 
+            return res.status(400).json({
+                message: "Missing required fields",
+                success: false
             });
         }
 
         // Kiểm tra OTP có tồn tại không
         const otpRecord = await OTP.findOne({ email }).sort({ createdAt: -1 });
         if (!otpRecord) {
-            return res.status(400).json({ 
-                message: "OTP not found or expired", 
-                success: false 
+            return res.status(400).json({
+                message: "OTP not found or expired",
+                success: false
             });
         }
 
         // So sánh OTP
         const isValidOtp = await bcrypt.compare(otp, otpRecord.otp);
         if (!isValidOtp) {
-            return res.status(400).json({ 
-                message: "Invalid OTP", 
-                success: false 
+            return res.status(400).json({
+                message: "Invalid OTP",
+                success: false
             });
         }
 
@@ -119,62 +123,62 @@ module.exports.register = async (req, res) => {
 
 
 module.exports.login = async (req, res) => {
-  try {
-    const auth_token = 'auth_token';
-    const { email, password } = req.body;
+    try {
+        const auth_token = 'auth_token';
+        const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({
-        message: 'make sure to provide all fields (email, password)',
-        success: false
-      });
+        if (!email || !password) {
+            return res.status(400).json({
+                message: 'make sure to provide all fields (email, password)',
+                success: false
+            });
+        }
+
+        if (!validator.isEmail(email)) {
+            return res.status(400).json({
+                message: 'email pattern failed. Please provide a valid email.',
+                success: false
+            });
+        }
+
+        const existingUser = await User.findOne({ email });
+        if (!existingUser) {
+            return res.status(400).json({ message: 'Invalid Credentials', success: false });
+        }
+
+        const isPasswordCorrect = await bcrypt.compare(password, existingUser.password);
+        if (!isPasswordCorrect) {
+            return res.status(400).json({ message: 'Invalid Credentials', success: false });
+        }
+
+        // Kiểm tra token đã tồn tại chưa
+        const isTokenExist = existingUser.tokens?.some(t => t.name === auth_token);
+        if (isTokenExist) {
+            return res.status(201).json({
+                result: existingUser,
+                message: `user with email ${email} already logged in`,
+                success: true
+            });
+        }
+
+        // Tạo token mới
+        const token = jwt.sign(
+            { email, _id: existingUser._id },
+            process.env.JWT_SECRET
+        );
+        existingUser.tokens.push({ name: auth_token, token });
+
+        // Lưu lại
+        const result = await existingUser.save();
+
+        res.status(200).json({ result, message: 'login successfully', success: true });
+    } catch (error) {
+        res.status(500).json({
+            message: 'login failed - controllers/user.js',
+            error: error.message,
+            success: false
+        });
     }
-
-    if (!validator.isEmail(email)) {
-      return res.status(400).json({
-        message: 'email pattern failed. Please provide a valid email.',
-        success: false
-      });
-    }
-
-    const existingUser = await User.findOne({ email });
-    if (!existingUser) {
-      return res.status(400).json({ message: 'Invalid Credentials', success: false });
-    }
-
-    const isPasswordCorrect = await bcrypt.compare(password, existingUser.password);
-    if (!isPasswordCorrect) {
-      return res.status(400).json({ message: 'Invalid Credentials', success: false });
-    }
-
-    // Kiểm tra token đã tồn tại chưa
-    const isTokenExist = existingUser.tokens?.some(t => t.name === auth_token);
-    if (isTokenExist) {
-      return res.status(201).json({
-        result: existingUser,
-        message: `user with email ${email} already logged in`,
-        success: true
-      });
-    }
-
-    // Tạo token mới
-    const token = jwt.sign(
-      { email, _id: existingUser._id },
-      process.env.JWT_SECRET
-    );
-    existingUser.tokens.push({ name: auth_token, token });
-
-    // Lưu lại
-    const result = await existingUser.save();
-
-    res.status(200).json({ result, message: 'login successfully', success: true });
-  } catch (error) {
-    res.status(500).json({
-      message: 'login failed - controllers/user.js',
-      error: error.message,
-      success: false
-    });
-  }
 };
 
 
