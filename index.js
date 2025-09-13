@@ -34,4 +34,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-module.exports = app;
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`)
+})
