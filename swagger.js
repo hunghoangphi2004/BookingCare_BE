@@ -28,7 +28,7 @@ const options = {
             bearerAuth: [], 
         }]
     },
-    apis: [path.join(process.cwd(), './routes/*.js')],
+    apis: [path.join(__dirname, './routes/*.js')],
 };
 
 const openapiSpecification = swaggerJsdoc(options);
