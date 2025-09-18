@@ -151,27 +151,28 @@ module.exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Invalid Credentials', success: false });
         }
 
-        // Kiểm tra token đã tồn tại chưa
-        const isTokenExist = existingUser.tokens?.some(t => t.name === auth_token);
-        if (isTokenExist) {
-            return res.status(201).json({
-                result: existingUser,
-                message: `user with email ${email} already logged in`,
-                success: true
-            });
-        }
-
         // Tạo token mới
         const token = jwt.sign(
-            { email, _id: existingUser._id },
+            { email, _id: existingUser._id, role: existingUser.role }, 
             process.env.JWT_SECRET
         );
-        existingUser.tokens.push({ name: auth_token, token });
+        
+        // Kiểm tra và cập nhật token
+        const tokenIndex = existingUser.tokens.findIndex(t => t.name === auth_token);
+        if (tokenIndex !== -1) {
+            existingUser.tokens[tokenIndex].token = token; 
+        } else {
+            existingUser.tokens.push({ name: auth_token, token });
+        }
 
-        // Lưu lại
-        const result = await existingUser.save();
+        await existingUser.save();
 
-        res.status(200).json({ result, message: 'login successfully', success: true });
+        res.status(200).json({ 
+            result: existingUser, 
+            token: token, 
+            message: 'login successfully', 
+            success: true 
+        });
     } catch (error) {
         res.status(500).json({
             message: 'login failed - controllers/user.js',

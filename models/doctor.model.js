@@ -1,6 +1,8 @@
 // models/DoctorUser.js
 const mongoose = require('mongoose');
+const slugUpdater = require('mongoose-slug-updater');
 
+mongoose.plugin(slugUpdater);
 const doctorUserSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -16,11 +18,17 @@ const doctorUserSchema = new mongoose.Schema({
         ref: 'Specialization',
         required: true
     },
+    phoneNumber: String,
     licenseNumber: String,
     experience: Number, // years
-    consultationFee: Number
+    consultationFee: Number,
+    name: { type: String, required: true },
+    slug: { type: String, slug: "name", unique: true },
+    thumbnail: String,
+    isDeleted: { type: Boolean, default: false }
 }, {
-    timestamps: true
+    timestamps: true,
+    strict: true
 });
 
-module.exports = mongoose.model('DoctorUser', doctorUserSchema);
+module.exports = mongoose.model('DoctorUser', doctorUserSchema, 'doctorusers');

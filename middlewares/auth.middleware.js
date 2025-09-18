@@ -1,18 +1,34 @@
-const jwt = require("jsonwebtoken")
+// middlewares/auth.middleware.js
+const jwt = require("jsonwebtoken");
 
 const auth = async (req, res, next) => {
     try {
-        if (!req.headers.auth_token) {
-            return res.status(401).json({ message: 'không tìm thấy token' })
+        const authHeader = req.headers.authorization;
+        
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ 
+                message: 'không tìm thấy token hoặc format sai. Sử dụng: Authorization: Bearer <token>' 
+            });
         }
 
-        const token = req.headers.auth_token
-        const decodedToken = jwt.verify(token, process.env.AUTH_TOKEN_SECRET_KEY)
-        req.userId = decodedToken._id
-        next() 
+        const token = authHeader.split(' ')[1];
+        
+        const decodedToken = jwt.verify(token, process.env.JWT_SECRET); 
+        
+        req.user = {
+            id: decodedToken._id,
+            email: decodedToken.email,
+            role: decodedToken.role
+        };
+        
+        next();
+    } catch (err) {
+        console.error('Auth error:', err.message);
+        return res.status(401).json({ 
+            message: 'xác thực thất bại',
+            error: err.message 
+        });
     }
-    catch (err) {
-        return res.status(401).json({ message: 'xác thực thất bại' })
-    }
-}
-module.exports = auth
+};
+
+module.exports = auth;

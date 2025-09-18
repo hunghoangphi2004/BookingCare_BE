@@ -12,7 +12,7 @@ const UserSchema = new mongoose.Schema(
         },
         role: {
             type: String,
-            enum: ['admin', 'doctor', 'patient'],
+            enum: ['admin', 'doctor', 'patient','supporter'],
             default: 'patient'
         },
         isActive: {
@@ -23,10 +23,12 @@ const UserSchema = new mongoose.Schema(
             type: [{ name: String, token: String }],
             default:[]
         },
-        createdAt: Date
+        createdAt: Date,
+        isDeleted: { type: Boolean, default: false }
     },
     {
-        timestamps: true
+        timestamps: true,
+        string: true
     }
 );
 
@@ -44,6 +46,6 @@ UserSchema.methods.generateAuthToken = async function () {
     return token
 }
 
-const userModel = mongoose.model('users', UserSchema)
+const userModel = mongoose.model('User', UserSchema, 'users')
 
 module.exports = userModel;

@@ -139,7 +139,6 @@ router.post('/login', AuthController.login)
  */
 router.post('/send-forget-password-otp', AuthController.sendForgetPasswordOTP)
 
-
 /**
  * @swagger
  * /auth/change-password:
