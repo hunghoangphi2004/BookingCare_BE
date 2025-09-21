@@ -1,5 +1,7 @@
 const clinicService = require("../services/clinic.service")
 const mongoose = require('mongoose');
+const fs = require("fs");
+const {uploadToCloudinary} = require('../utils/cloudinary.util')
 
 module.exports.getAllClinic = async (req, res, next) => {
     try {
@@ -12,7 +14,23 @@ module.exports.getAllClinic = async (req, res, next) => {
 
 module.exports.createClinic = async (req, res, next) => {
     try {
-        const newClinic = await clinicService.createClinic(req.body);
+        let imageUrl = null;
+
+        if (req.file) {
+            // Upload lên Cloudinary
+            const result = await uploadToCloudinary(
+                req.file.path,
+                "clinics"
+            );
+            imageUrl = result.secure_url;
+
+            // Xóa file tạm
+            fs.unlinkSync(req.file.path);
+        }
+        const newClinic = await clinicService.createClinic({
+            ...req.body,
+            image: imageUrl,
+        });
         return res.status(200).json({ success: true, clinic: newClinic })
     } catch (err) {
         next(err)

@@ -10,8 +10,14 @@ module.exports.getAllSpec = async () => {
 module.exports.createSpecialization = async (body) => {
     const { name, description, image } = body;
 
-    if (!name || !description || !image) {
-        throw new AppError("Bắt buộc tất cả các trường", 400);
+    if (!name ) {
+        throw new AppError("Bắt buộc tên", 400);
+    }
+    if (!description) {
+        throw new AppError("Bắt buộc mô tả", 400);
+    }
+    if (!image) {
+        throw new AppError("Bắt buộc ảnh", 400);
     }
 
     let newSpecialization = new Specialization();

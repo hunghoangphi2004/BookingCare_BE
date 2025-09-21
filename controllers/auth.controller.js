@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken')
 const validator = require('validator')
 const nodemailer = require('nodemailer')
 const otpGenerator = require('otp-generator')
+const fs = require("fs");
+const {uploadToCloudinary} = require('../utils/cloudinary.util')
 
 module.exports.getAllUsers = async (req, res) => {
     try {
@@ -277,3 +279,72 @@ module.exports.changePassword = async (req, res) => {
 //         res.status(404).json({ message: 'error in deleteAllUsers - controllers/user.js', success: false })
 //     }
 // }
+
+module.exports.logout = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({ message: "User không tồn tại", success: false });
+        }
+
+        // Xoá token hiện tại
+        user.tokens = user.tokens.filter(t => t.token !== req.token);
+        await user.save();
+
+        res.status(200).json({ message: "Logout thành công", success: true });
+    } catch (error) {
+        res.status(500).json({
+            message: "Logout thất bại - controllers/user.js",
+            error: error.message,
+            success: false
+        });
+    }
+};
+
+
+module.exports.getProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select("email role");
+        if (!user) {
+            return res.status(404).json({ message: "User không tồn tại" });
+        }
+        res.json({
+            email: user.email,
+            role: user.role,
+            avatar: user.avatar
+        });
+    } catch (err) {
+        res.status(500).json({ message: "Lỗi server", error: err.message });
+    }
+};
+
+module.exports.changeAvatar = async (req, res, next) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: "Vui lòng chọn file ảnh" });
+        }
+
+        // Upload lên Cloudinary
+        const result = await uploadToCloudinary(req.file.path, "avatars");
+        const imageUrl = result.secure_url;
+
+        // Xóa file tạm
+        fs.unlinkSync(req.file.path);
+
+        // Update avatar user
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { avatar: imageUrl },
+            { new: true }
+        ).select("email role avatar");
+
+        res.status(200).json({
+            success: true,
+            message: "Cập nhật avatar thành công",
+            user
+        });
+    } catch (err) {
+        next(err);
+    }
+};

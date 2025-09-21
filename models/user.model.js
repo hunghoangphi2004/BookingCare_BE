@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema(
         password: {
             type: String,
         },
+        avatar: {type: String, default: "https://res.cloudinary.com/doas6zntt/image/upload/v1758441363/avatars/tpgnhscp4odjxknhtfo6.png"},
         role: {
             type: String,
             enum: ['admin', 'doctor', 'patient','supporter'],

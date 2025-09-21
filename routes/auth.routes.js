@@ -1,7 +1,8 @@
 // routes/patient-auth.js
 const express = require('express');
 const AuthController = require('../controllers/auth.controller');
-const { auth } = require('../middlewares/auth.middleware');
+const auth = require('../middlewares/auth.middleware'); 
+const upload = require('../middlewares/admin/uploadCloud.middleware')
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ const router = express.Router();
  *       401:
  *         description: Unauthorized
  */
-router.get('/get-all-users', AuthController.getAllUsers)
+router.get('/get-all-users',auth, AuthController.getAllUsers)
 
 /**
  * @swagger
@@ -174,6 +175,17 @@ router.post('/send-forget-password-otp', AuthController.sendForgetPasswordOTP)
  *         description: Lỗi server khi đổi mật khẩu
  */
 router.post('/change-password', AuthController.changePassword)
+
+router.post("/logout",auth, AuthController.logout);
+
+router.get("/profile", auth, AuthController.getProfile);
+
+router.post(
+  "/change-avatar",
+  auth,
+  upload.single("avatar"),
+  AuthController.changeAvatar
+);
 
 
 

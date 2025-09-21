@@ -27,10 +27,16 @@ module.exports.getAllDoctor = async (role, userId) => {
 };
 
 module.exports.createDoctor = async (body) => {
-    const { email, name, password, phoneNumber, licenceNumber, experience, consultationFee, clinicId, specializationId } = body;
+    const { email, name, password,thumbnail, phoneNumber, licenceNumber, experience, consultationFee, clinicId, specializationId } = body;
 
-    if (!email || !password || !name) {
-        throw new AppError("Email và password là bắt buộc", 400);
+    if (!email ) {
+        throw new AppError("Email là bắt buộc", 400);
+    }
+    if ( !name) {
+        throw new AppError("Name là bắt buộc", 400);
+    }
+    if (!password) {
+        throw new AppError("Password là bắt buộc", 400);
     }
 
     const existingUser = await User.findOne({ email });
@@ -52,6 +58,7 @@ module.exports.createDoctor = async (body) => {
     newDoctor.experience = experience;
     newDoctor.consultationFee = consultationFee;
     newDoctor.phoneNumber = phoneNumber;
+    newDoctor.thumbnail = thumbnail,
     newDoctor.clinicId = clinicId;
     newDoctor.specializationId = specializationId;
     newDoctor.isDeleted = false;

@@ -20,11 +20,18 @@ var initWebRoutes = require('./routes/web')
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+}));
 
-app.use(cors());
 
 viewEngine(app)
 initWebRoutes(app)
+
+
+
 
 // Swagger Docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpecification));

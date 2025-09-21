@@ -4,12 +4,15 @@ const router = express.Router();
 const clinicController = require('../controllers/clinic.controller');
 const auth = require('../middlewares/auth.middleware'); 
 const role = require('../middlewares/role.middleware');
+const cloudinary = require('cloudinary').v2
+const streamifier = require('streamifier')
+const upload = require('../middlewares/admin/uploadCloud.middleware')
 
 
 
 router.get('/get-all', auth,role("admin"), clinicController.getAllClinic);
 
-router.post("/create",auth, role("admin"), clinicController.createClinic);
+router.post("/create",auth, role("admin"),upload.single("image"), clinicController.createClinic);
 
 router.put("/edit/:id", auth, role("admin"), clinicController.editClinic);
 

@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Specialization = require("../models/specialization.model");
 const specializationService = require("../services/specialization.service")
+const fs = require("fs");
+const {uploadToCloudinary} = require('../utils/cloudinary.util')
 
 module.exports.getAllSpec = async (req, res, next) => {
     try {
@@ -14,16 +16,34 @@ module.exports.getAllSpec = async (req, res, next) => {
 
 module.exports.createSpecialization = async (req, res, next) => {
     try {
-        const newSpecialization = await specializationService.createSpecialization(req.body)
-        return res.status(200).json({ success: true, newSpecialization: newSpecialization})
+        let imageUrl = null;
+
+        if (req.file) {
+            // Upload lên Cloudinary
+            const result = await uploadToCloudinary(
+                req.file.path,
+                "specializations"
+            );
+            imageUrl = result.secure_url;
+
+            // Xóa file tạm
+            fs.unlinkSync(req.file.path);
+        }
+        const newSpecialization = await specializationService.createSpecialization({
+            ...req.body,
+            image: imageUrl,
+        });
+
+        // const newSpecialization = await specializationService.createSpecialization(req.body)
+        return res.status(200).json({ success: true, newSpecialization: newSpecialization })
     } catch (err) {
         next(err)
     }
 }
 
-module.exports.editSpecialization= async (req, res,next) => {
+module.exports.editSpecialization = async (req, res, next) => {
     try {
-       const updatedSpecialization = await specializationService.editSpecialization(req.params.id, req.body)
+        const updatedSpecialization = await specializationService.editSpecialization(req.params.id, req.body)
         return res.status(200).json({
             success: true,
             message: "Cập nhật chuyên khoa thành công",

@@ -5,6 +5,8 @@ const Clinic = require("../models/clinic.model")
 const Specialization = require("../models/specialization.model")
 const bcrypt = require("bcryptjs");
 const doctorService = require("../services/doctor.service")
+const fs = require("fs");
+const {uploadToCloudinary} = require('../utils/cloudinary.util')
 
 module.exports.getAllDoctor = async (req, res, next) => {
     try {
@@ -18,7 +20,23 @@ module.exports.getAllDoctor = async (req, res, next) => {
 
 module.exports.createDoctor = async (req, res, next) => {
     try {
-        const {newUser,newDoctor} = await doctorService.createDoctor(req.body)
+        console.log("req.body:", req.body);
+        console.log("req.file:", req.file);
+        let imageUrl = null;
+        
+                if (req.file) {
+                    // Upload lên Cloudinary
+                    const result = await uploadToCloudinary(
+                        req.file.path,
+                        "doctors"
+                    );
+                    imageUrl = result.secure_url;
+        
+                    // Xóa file tạm
+                    fs.unlinkSync(req.file.path);
+                }
+
+        const {newUser,newDoctor} = await doctorService.createDoctor({...req.body, thumbnail: imageUrl})
         return res.status(201).json({
             success: true,
             message: "Doctor created successfully",

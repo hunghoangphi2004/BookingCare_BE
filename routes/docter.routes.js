@@ -4,6 +4,9 @@ const router = express.Router();
 const doctorController = require('../controllers/doctor.controller');
 const auth = require('../middlewares/auth.middleware'); 
 const role = require('../middlewares/role.middleware');
+const cloudinary = require('cloudinary').v2
+const streamifier = require('streamifier')
+const upload = require('../middlewares/admin/uploadCloud.middleware')
 
 /**
  * @swagger
@@ -21,7 +24,7 @@ const role = require('../middlewares/role.middleware');
  */
 router.get('/get-all', auth, doctorController.getAllDoctor);
 
-router.post("/create",auth, role("admin"), doctorController.createDoctor);
+router.post("/create",auth, role("admin"),upload.single("thumbnail") ,doctorController.createDoctor);
 
 router.put("/edit/:id", auth, role("admin", "doctor"), doctorController.editDoctor);
 
