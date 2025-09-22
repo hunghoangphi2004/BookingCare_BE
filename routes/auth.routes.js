@@ -8,6 +8,13 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: PatientAuth
+ *   description: API xác thực bệnh nhân
+ */
+
+/**
+ * @swagger
  * /auth/get-all-users:
  *   get:
  *     summary: Lấy danh sách tất cả users
@@ -176,17 +183,71 @@ router.post('/send-forget-password-otp', AuthController.sendForgetPasswordOTP)
  */
 router.post('/change-password', AuthController.changePassword)
 
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Đăng xuất tài khoản
+ *     tags: [PatientAuth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Đăng xuất thành công
+ *       401:
+ *         description: Unauthorized
+ */
 router.post("/logout",auth, AuthController.logout);
 
+/**
+ * @swagger
+ * /auth/profile:
+ *   get:
+ *     summary: Lấy thông tin profile của user hiện tại
+ *     tags: [PatientAuth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Trả về thông tin user
+ *       401:
+ *         description: Unauthorized
+ */
 router.get("/profile", auth, AuthController.getProfile);
 
+/**
+ * @swagger
+ * /auth/change-avatar:
+ *   post:
+ *     summary: Đổi ảnh đại diện người dùng
+ *     tags: [PatientAuth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - avatar
+ *             properties:
+ *               avatar:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Đổi avatar thành công
+ *       400:
+ *         description: File không hợp lệ
+ *       401:
+ *         description: Unauthorized
+ */
 router.post(
   "/change-avatar",
   auth,
   upload.single("avatar"),
   AuthController.changeAvatar
 );
-
-
 
 module.exports = router;

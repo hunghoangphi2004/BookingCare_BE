@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Socket.IO Private Chat Test</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      #messages {
+        border: 1px solid #ccc;
+        padding: 10px;
+        height: 200px;
+        overflow-y: auto;
+      }
+      #form {
+        margin-top: 10px;
+      }
+      input {
+        padding: 5px;
+      }
+      button {
+        padding: 5px 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>🔌 Test Socket.IO Chat (JWT + Room)</h2>
+
+    <div>
+      <input id="token" placeholder="Nhập JWT token..." style="width: 300px" />
+      <button id="loginBtn">Login</button>
+    </div>
+
+    <div id="receiverDiv" style="display: none; margin-top: 10px">
+      <input
+        id="receiver"
+        placeholder="Nhập ID người nhận..."
+        style="width: 200px"
+      />
+      <button id="connectBtn">Tạo phòng</button>
+    </div>
+
+    <div id="status" style="margin-top: 10px; color: green"></div>
+
+    <div id="messages"></div>
+
+    <form id="form" style="display: none">
+      <input id="msg" autocomplete="off" placeholder="Nhập tin nhắn..." />
+      <button>Gửi</button>
+    </form>
+
+    <script>
+      let socket;
+      let currentRoom = null;
+      let userEmail = "";
+
+      const loginBtn = document.getElementById("loginBtn");
+      const tokenInput = document.getElementById("token");
+      const receiverDiv = document.getElementById("receiverDiv");
+      const connectBtn = document.getElementById("connectBtn");
+      const receiverInput = document.getElementById("receiver");
+      const statusDiv = document.getElementById("status");
+      const form = document.getElementById("form");
+      const input = document.getElementById("msg");
+      const messages = document.getElementById("messages");
+
+      // 1️⃣ Login với token
+      loginBtn.addEventListener("click", () => {
+        const token = tokenInput.value.trim();
+        if (!token) return alert("Nhập token");
+
+        socket = io("http://localhost:3000", { auth: { token } });
+
+        socket.once("connect", () => {
+          statusDiv.textContent = "✅ Đã kết nối với server!";
+          receiverDiv.style.display = "block";
+        });
+
+        socket.on("connect_error", (err) => {
+          statusDiv.style.color = "red";
+          statusDiv.textContent = "❌ Kết nối thất bại: " + err.message;
+        });
+
+        socket.off("receive_message");
+        socket.on("receive_message", (msg) => {
+          console.log("📩 receive_message:", msg);
+          const item = document.createElement("div");
+          item.textContent = `${msg.sender}: ${msg.content}`;
+          messages.appendChild(item);
+          messages.scrollTop = messages.scrollHeight;
+        });
+
+        // Khi được invite vào room
+        socket.on("joined_room", (data) => {
+          currentRoom = data.roomId;
+          statusDiv.textContent = `✅ Bạn được mời vào phòng từ ${data.from}`;
+          form.style.display = "block";
+        });
+      });
+
+      // 2️⃣ Tạo phòng với receiver
+      connectBtn.addEventListener("click", () => {
+        const receiverId = receiverInput.value.trim();
+        if (!receiverId) return alert("Nhập ID người nhận");
+
+        socket.emit("start_room", receiverId, (res) => {
+          if (res.error) {
+            statusDiv.style.color = "red";
+            statusDiv.textContent = "❌ Lỗi: " + res.error;
+          } else {
+            currentRoom = res.roomId;
+            statusDiv.textContent = "✅ Đã vào phòng: " + currentRoom;
+            form.style.display = "block";
+          }
+        });
+      });
+
+      // Gửi tin nhắn
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (input.value && socket && currentRoom) {
+          socket.emit("send_message", {
+            roomId: currentRoom,
+            content: input.value,
+          });
+          input.value = "";
+        }
+      });
+    </script>
+  </body>
+</html>

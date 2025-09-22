@@ -1,18 +1,27 @@
-// routes/doctor.routes.js
-const express = require('express');
+// routes/home.routes.js
+const express = require("express");
 const router = express.Router();
-const homeController = require('../controllers/home.controller');
+const homeController = require("../controllers/home.controller");
 
+/**
+ * @swagger
+ * tags:
+ *   name: Home
+ *   description: Trang chủ
+ */
 
-
-router.get('/', homeController.getHomePage);
-
-// router.post("/create",auth, role("admin"), clinicController.createClinic);
-
-// router.put("/edit/:id", auth, role("admin"), clinicController.editClinic);
-
-// router.delete("/delete/:id", auth, role("admin"), clinicController.deleteClinic);
-
-// router.patch("/change-status/:status/:id", auth, role("admin"), clinicController.changeStatus);
+/**
+ * @swagger
+ * /home:
+ *   get:
+ *     summary: Lấy dữ liệu trang chủ
+ *     tags: [Home]
+ *     responses:
+ *       200:
+ *         description: Thành công
+ *       500:
+ *         description: Lỗi server
+ */
+router.get("/", homeController.getHomePage);
 
 module.exports = router;
