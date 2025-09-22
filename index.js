@@ -26,7 +26,6 @@ const io = new Server(server, {
 
 io.use(socketAuth);
 
-// map userId -> socket.id (nếu có nhiều socket/user thì dùng array)
 const onlineUsers = new Map();
 
 // Lắng nghe kết nối socket
