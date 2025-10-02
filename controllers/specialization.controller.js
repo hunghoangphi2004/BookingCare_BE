@@ -65,6 +65,17 @@ module.exports.deleteSpecialization = async (req, res, next) => {
     }
 }
 
+module.exports.getSpecializationBySlug = async (req,res,next) => {
+    const slug = req.params.slug
+
+    try {
+        const record = await specializationService.getSpecializationBySlug(slug);
+        return res.status(200).json({ success: true, data: record })
+    } catch (err) {
+        next(err)
+    }
+}
+
 // module.exports.changeStatus = async (req, res) => {
 //     try {
 //         const { status, id } = req.params;

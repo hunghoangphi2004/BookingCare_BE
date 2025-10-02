@@ -20,4 +20,6 @@ router.delete("/delete/:id", auth, role("admin"), clinicController.deleteClinic)
 
 router.patch("/change-status/:status/:id", auth, role("admin"), clinicController.changeStatus);
 
+router.get('/:slug', clinicController.getClinicBySlug);
+
 module.exports = router;

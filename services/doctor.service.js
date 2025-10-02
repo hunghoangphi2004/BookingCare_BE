@@ -5,6 +5,7 @@ const Clinic = require("../models/clinic.model")
 const Specialization = require("../models/specialization.model")
 const bcrypt = require("bcryptjs");
 const AppError = require("../utils/appError.util")
+const Appointment = require("../models/appointment.model");
 
 
 module.exports.getAllDoctor = async (role, userId) => {
@@ -18,7 +19,6 @@ module.exports.getAllDoctor = async (role, userId) => {
         throw new AppError("Forbidden: Không có quyền", 403);
     }
     const doctorsRaw = await Doctor_user.find(find);
-    console.log("Raw doctors:", doctorsRaw);
     doctors = await Doctor_user.find(find)
         .populate({ path: 'userId', select: 'email role', })
         .populate({ path: 'clinicId', select: 'name address phone description image' })
@@ -26,13 +26,31 @@ module.exports.getAllDoctor = async (role, userId) => {
     return doctors
 };
 
-module.exports.createDoctor = async (body) => {
-    const { email, name, password,thumbnail, phoneNumber, licenceNumber, experience, consultationFee, clinicId, specializationId } = body;
+module.exports.getDoctorBySlug = async (slug) => {
+    let find = {
+        slug: slug,
+        isDeleted: false
+    };
 
-    if (!email ) {
+    let doctor = await Doctor_user.findOne(find);
+    if (!doctor) {
+        throw new AppError("Không tìm thấy bác sĩ", 404)
+    }
+
+    doctor = await Doctor_user.findOne(find)
+        .populate({ path: 'userId', select: 'email role', })
+        .populate({ path: 'clinicId', select: 'name address phone description' })
+        .populate({ path: 'specializationId', select: 'name description' });
+    return doctor;
+}
+
+module.exports.createDoctor = async (body) => {
+    const { email, name, password, thumbnail, phoneNumber, licenceNumber, experience, consultationFee, clinicId, specializationId } = body;
+
+    if (!email) {
         throw new AppError("Email là bắt buộc", 400);
     }
-    if ( !name) {
+    if (!name) {
         throw new AppError("Name là bắt buộc", 400);
     }
     if (!password) {
@@ -59,7 +77,7 @@ module.exports.createDoctor = async (body) => {
     newDoctor.consultationFee = consultationFee;
     newDoctor.phoneNumber = phoneNumber;
     newDoctor.thumbnail = thumbnail,
-    newDoctor.clinicId = clinicId;
+        newDoctor.clinicId = clinicId;
     newDoctor.specializationId = specializationId;
     newDoctor.isDeleted = false;
 
@@ -160,3 +178,7 @@ module.exports.changeStatus = async (id, status) => {
     await user.save();
     return { message: `Đã đổi trạng thái bác sĩ thành ${status}` };
 };
+
+module.exports.getMyAppointments = async() => {
+    
+}

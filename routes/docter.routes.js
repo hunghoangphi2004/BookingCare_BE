@@ -32,4 +32,6 @@ router.delete("/delete/:id", auth, role("admin"), doctorController.deleteDoctor)
 
 router.patch("/change-status/:status/:id", auth, role("admin"), doctorController.changeStatus);
 
+router.get('/:slug',  doctorController.getDoctorBySlug);
+
 module.exports = router;

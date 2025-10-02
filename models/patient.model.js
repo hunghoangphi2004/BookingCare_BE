@@ -1,4 +1,3 @@
-// models/PatientProfile.js
 const mongoose = require("mongoose");
 
 const patientProfileSchema = new mongoose.Schema({
@@ -13,34 +12,40 @@ const patientProfileSchema = new mongoose.Schema({
     },
     firstName: {
         type: String,
-        required: true,
-        trim: true
+        trim: true,
+        default: "Chưa cập nhật"
     },
     lastName: {
         type: String,
-        required: true,
-        trim: true
+        trim: true,
+        default: ""
     },
     phoneNumber: {
         type: String,
-        required: true
+        default: ""
     },
-    dateOfBirth: Date,
+    dateOfBirth: {
+        type: Date,
+        default: null
+    },
     gender: {
         type: String,
-        enum: ['male', 'female', 'other']
+        enum: ['male', 'female', 'other'],
+        default: 'other'
     },
-    address: String,
+    address: {
+        type: String,
+        default: ""
+    },
     emergencyContact: {
-        name: String,
-        phone: String,
-        relationship: String
+        name: { type: String, default: "" },
+        phone: { type: String, default: "" },
+        relationship: { type: String, default: "" }
     }
 }, {
     timestamps: true
 });
 
-// Auto generate patientId
 patientProfileSchema.pre('save', async function(next) {
     if (this.isNew && !this.patientId) {
         const timestamp = Date.now().toString().slice(-6);

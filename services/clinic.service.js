@@ -92,3 +92,17 @@ module.exports.changeStatus = async (status, id) => {
     return { message: `Đã đổi trạng thái phòng khám thành ${status}` };
 }
 
+module.exports.getClinicBySlug = async (slug) => {
+    let find = {
+        slug: slug,
+        isDeleted: false
+    };
+
+    let clinic = await Clinic.findOne(find);
+    if (!clinic) {
+        throw new AppError("Không tìm thấy phòng khám", 404)
+    }
+
+    clinic = await Clinic.findOne(find)
+    return clinic;
+}

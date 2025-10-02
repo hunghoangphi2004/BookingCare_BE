@@ -18,6 +18,8 @@ router.put("/edit/:id", auth, role("admin"), specializationController.editSpecia
 
 router.delete("/delete/:id", auth, role("admin"), specializationController.deleteSpecialization);
 
+router.get('/:slug', specializationController.getSpecializationBySlug);
+
 // router.patch("/change-status/:status/:id", auth, role("admin"), clinicController.changeStatus);
 
 module.exports = router;

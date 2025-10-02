@@ -1,0 +1,77 @@
+const moment = require("moment");
+const Doctor_user = require("../models/doctor.model");
+const Schedule = require("../models/schedule.model"); // cần tạo model Schedule
+const AppError = require("../utils/appError.util");
+
+module.exports.createAllDoctorsSchedule = async () => {
+  try {
+    // Các khung giờ mặc định
+    const timeArr = [
+      "08:00-08:30",
+      "08:30-09:00",
+      "09:00-09:30",
+      "09:30-10:00",
+      "10:00-10:30",
+      "10:30-11:00",
+      "11:00-11:30",
+      "11:30-12:00",
+      "13:00-13:30",
+      "13:30-14:00",
+      "14:00-14:30",
+      "14:30-15:00",
+      "15:00-15:30",
+      "15:30-16:00",
+      "16:00-16:30",
+      "16:30-17:00",
+    ];
+
+    // 3 ngày tới
+    const threeDaySchedules = [];
+    for (let i = 0; i < 3; i++) {
+      let date = moment(new Date())
+        .add(i, "days")
+        .format("DD/MM/YYYY");
+      threeDaySchedules.push(date);
+    }
+
+    // Lấy tất cả bác sĩ
+    const doctors = await Doctor_user.find({ isDeleted: false }).select("_id");
+
+    if (!doctors || doctors.length === 0) {
+      throw new AppError("Không có bác sĩ nào trong hệ thống", 404);
+    }
+
+    // Kiểm tra đã tạo lịch trước đó chưa (check bác sĩ đầu tiên, ngày đầu tiên, ca đầu tiên)
+    const check = await Schedule.findOne({
+      doctorId: doctors[0]._id,
+      date: threeDaySchedules[0],
+      time: timeArr[0],
+    });
+
+    if (check) {
+      return "Lịch đã được tạo trước đó, không tạo trùng.";
+    }
+
+    // Tạo lịch cho tất cả bác sĩ
+    let bulkSchedules = [];
+    doctors.forEach((doctor) => {
+      threeDaySchedules.forEach((day) => {
+        timeArr.forEach((time) => {
+          bulkSchedules.push({
+            doctorId: doctor._id,
+            date: day,
+            time: time,
+            maxBooking: 1, // mỗi ca 1 bệnh nhân
+            sumBooking: 0,
+          });
+        });
+      });
+    });
+
+    await Schedule.insertMany(bulkSchedules);
+
+    return "Đã tạo lịch khám cho tất cả bác sĩ trong 3 ngày tới.";
+  } catch (err) {
+    throw err;
+  }
+};

@@ -1,7 +1,7 @@
 const clinicService = require("../services/clinic.service")
 const mongoose = require('mongoose');
 const fs = require("fs");
-const {uploadToCloudinary} = require('../utils/cloudinary.util')
+const { uploadToCloudinary } = require('../utils/cloudinary.util')
 
 module.exports.getAllClinic = async (req, res, next) => {
     try {
@@ -69,3 +69,14 @@ module.exports.changeStatus = async (req, res) => {
     }
 }
 
+module.exports.getClinicBySlug = async (req,res,next) => {
+    const slug = req.params.slug
+    console.log(slug)
+
+    try {
+        const record = await clinicService.getClinicBySlug(slug);
+        return res.status(200).json({ success: true, data: record })
+    } catch (err) {
+        next(err)
+    }
+}

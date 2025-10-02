@@ -1,4 +1,5 @@
 const User = require('../models/user.model.js')
+const PatientProfile = require("../models/patient.model.js")
 const OTP = require('../models/otp.model.js')
 const bcrypt = require("bcryptjs")
 const jwt = require('jsonwebtoken')
@@ -108,9 +109,16 @@ module.exports.register = async (req, res) => {
 
         await newUser.save();
 
+        // 2️⃣ Tạo patient profile liên kết user
+        const newPatientProfile = new PatientProfile({
+            userId: newUser._id,
+        });
+        await newPatientProfile.save();
+
         return res.status(201).json({
             message: "User registered successfully",
             user: newUser,
+            patientProfile: newPatientProfile,
             success: true
         });
     } catch (error) {
