@@ -75,3 +75,30 @@ module.exports.createAllDoctorsSchedule = async () => {
     throw err;
   }
 };
+module.exports.getSchedulesByDoctorAndDate = async (slug, date) => {
+  const formattedDate = moment(date, ["DD-MM-YYYY", "DD/MM/YYYY"]).format("DD/MM/YYYY");
+  const doctor = await Doctor_user.findOne({ slug, isDeleted: false });
+  if (!doctor) throw new AppError("Không tìm thấy bác sĩ với slug này", 404);
+
+  const schedules = await Schedule.find({
+    doctorId: doctor._id,
+    date: formattedDate,
+  })
+    .sort({ time: 1 })
+    .lean();
+
+  return {
+    doctor: {
+      id: doctor._id,
+      name: doctor.name,
+      slug: doctor.slug,
+    },
+    date: formattedDate,
+    schedules: schedules.map((s) => ({
+      _id: s._id,
+      time: s.time,
+      maxBooking: s.maxBooking,
+      sumBooking: s.sumBooking,
+    })),
+  };
+};

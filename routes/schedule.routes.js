@@ -16,5 +16,6 @@ router.post(
     scheduleController.createAllSchedules
 );
 router.get("/my-schedule", auth,role("doctor"), scheduleController.getMyAppointmentsByDoctor);
+router.get("/doctor/:slug/date/:date", scheduleController.getSchedulesByDoctorAndDate);
 
 module.exports = router;

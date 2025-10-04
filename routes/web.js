@@ -6,6 +6,7 @@ const homeRoutes = require("./home.routes")
 const specializationRoutes = require("./specialization.routes")
 const appointmentRoutes = require("./appointment.routes")
 const scheduleRoutes = require("./schedule.routes")
+const supporterRoutes = require("./supporter.routes")
 
 let router = express.Router();
 
@@ -17,6 +18,7 @@ let initWebRoutes = (app) => {
     app.use("/", homeRoutes)
     app.use("/appointment", appointmentRoutes)
     app.use("/schedule", scheduleRoutes)
+    app.use("/supporter", supporterRoutes)
 
     return app.use("/", router);
 }
