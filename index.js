@@ -7,7 +7,6 @@ const swaggerUi = require('swagger-ui-express');
 const openapiSpecification = require('./swagger');
 const cors = require('cors') 
 const errorHandler = require("./middlewares/error.middleware")
-const {OpenAI} = require("openai")
 
 
 
@@ -31,11 +30,6 @@ viewEngine(app)
 initWebRoutes(app)
 
 
-const openai = new OpenAI(
-  {
-    apiKey: process.env.OPENAI_API_KEY
-  }
-)
 
 
 
