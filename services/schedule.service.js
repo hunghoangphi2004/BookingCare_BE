@@ -83,6 +83,7 @@ module.exports.getSchedulesByDoctorAndDate = async (slug, date) => {
   const schedules = await Schedule.find({
     doctorId: doctor._id,
     date: formattedDate,
+    isBooked: false
   })
     .sort({ time: 1 })
     .lean();
@@ -102,3 +103,18 @@ module.exports.getSchedulesByDoctorAndDate = async (slug, date) => {
     })),
   };
 };
+
+module.exports.createSingleSchedule = async (body) => {
+  const {doctorId,date, schedules} = body;
+  console.log(doctorId,date)
+  let doctorSchedules = [];
+  for(const item of schedules){
+    let newSchedule = new Schedule()
+    newSchedule.doctorId = doctorId;
+    newSchedule.date = date;
+    newSchedule.time = item.time
+    doctorSchedules.push(newSchedule)
+    await newSchedule.save();
+  }
+  return doctorSchedules
+}

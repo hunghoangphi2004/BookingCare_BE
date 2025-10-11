@@ -34,4 +34,6 @@ router.patch("/change-status/:status/:id", auth, role("admin"), doctorController
 
 router.get('/:slug',  doctorController.getDoctorBySlug);
 
+router.get('/getDoctorById/:id',  doctorController.getDoctorById);
+
 module.exports = router;

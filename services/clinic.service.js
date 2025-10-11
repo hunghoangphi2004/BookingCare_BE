@@ -2,9 +2,33 @@ const Clinic = require("../models/clinic.model")
 const AppError = require("../utils/appError.util")
 const mongoose = require('mongoose');
 
-module.exports.getAllClinic = async () => {
-    const clinics = await Clinic.find({ isDeleted: false });
-    return clinics;
+module.exports.getAllClinic = async (filters = {}, page = 1, limit = 10) => {
+    let find = { isDeleted: false };
+    if (filters.keyword) {
+        find.name = { $regex: filters.keyword, $options: "i" };
+    }
+
+    page = Math.max(1, parseInt(page) || 1);
+    limit = Math.max(1, parseInt(limit) || 10);
+
+    const skip = (page - 1) * limit;
+
+    const total = await Clinic.countDocuments(find);
+
+    const clinics = await Clinic.find(find)
+        .skip(limit == 0 ? 0 : skip)
+        .limit(limit == 0 ? 0 : limit)
+        .sort({ createdAt: -1 })
+        .lean();
+    return {
+        data: clinics,
+        pagination: {
+            total,
+            page,
+            limit,
+            totalPages: limit === 0 ? 1 : Math.ceil(total / limit),
+        },
+    };
 }
 
 module.exports.createClinic = async (body) => {

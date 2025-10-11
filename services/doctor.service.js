@@ -8,9 +8,8 @@ const AppError = require("../utils/appError.util")
 const Appointment = require("../models/appointment.model");
 
 
-module.exports.getAllDoctor = async (role, userId) => {
+module.exports.getAllDoctor = async (role, userId, filters = {}, page = 1, limit = 10) => {
     let find;
-    let doctors;
     if (role === "admin") {
         find = { isDeleted: false };
     } else if (role === "doctor") {
@@ -18,17 +17,61 @@ module.exports.getAllDoctor = async (role, userId) => {
     } else {
         throw new AppError("Forbidden: Không có quyền", 403);
     }
-    const doctorsRaw = await Doctor_user.find(find);
-    doctors = await Doctor_user.find(find)
+
+    if (filters.specializationId) find.specializationId = filters.specializationId
+    if (filters.clinicId) find.clinicId = filters.clinicId
+    if (filters.status) find.status = filters.status
+    if (filters.keyword) find.name = { $regex: filters.keyword, $options: "i" };
+
+    page = Math.max(1, parseInt(page) || 1);
+    limit = Math.max(1, parseInt(limit) || 10);
+
+    const skip = (page - 1) * limit;
+
+
+    let doctors = await Doctor_user.find(find)
         .populate({ path: 'userId', select: 'email role', })
         .populate({ path: 'clinicId', select: 'name address phone description image' })
-        .populate({ path: 'specializationId', select: 'name description image' });
-    return doctors
+        .populate({ path: 'specializationId', select: 'name description image' })
+        .skip(limit == 0 ? 0 : skip)
+        .limit(limit == 0 ? 0 : limit)
+        .lean()
+
+    let total = await Doctor_user.countDocuments(find)
+
+
+    return {
+        data: doctors,
+        pagination: {
+            total,
+            page,
+            limit,
+            totalPages: limit == 0 ? 1 : Math.ceil(total / limit)
+        }
+    }
 };
 
 module.exports.getDoctorBySlug = async (slug) => {
     let find = {
         slug: slug,
+        isDeleted: false
+    };
+
+    let doctor = await Doctor_user.findOne(find);
+    if (!doctor) {
+        throw new AppError("Không tìm thấy bác sĩ", 404)
+    }
+
+    doctor = await Doctor_user.findOne(find)
+        .populate({ path: 'userId', select: 'email role', })
+        .populate({ path: 'clinicId', select: 'name address phone description' })
+        .populate({ path: 'specializationId', select: 'name description' });
+    return doctor;
+}
+
+module.exports.getDoctorById = async (id) => {
+    let find = {
+        _id: id,
         isDeleted: false
     };
 
@@ -179,6 +222,6 @@ module.exports.changeStatus = async (id, status) => {
     return { message: `Đã đổi trạng thái bác sĩ thành ${status}` };
 };
 
-module.exports.getMyAppointments = async() => {
-    
+module.exports.getMyAppointments = async () => {
+
 }

@@ -46,6 +46,37 @@ module.exports.createSupporter = async (req, res, next) => {
     }
 }
 
+module.exports.approveAppointment = async (req, res, next) => {
+    const { id } = req.params;
+
+    const appointment = await Appointment.findById(id)
+        .populate("doctorId")
+        .populate("patientId");
+
+    if (!appointment) return next(new AppError("Không tìm thấy lịch hẹn", 404));
+
+    appointment.status = "confirmed";
+    await appointment.save();
+
+    await sendEmail(
+        appointment.patientId.email,
+        "Lịch khám của bạn đã được xác nhận",
+        `<p>Xin chào ${appointment.patientId.firstName},</p>
+     <p>Lịch khám của bạn đã được xác nhận thành công:</p>
+     <ul>
+       <li><b>Bác sĩ:</b> ${appointment.doctorId.fullName}</li>
+       <li><b>Ngày:</b> ${appointment.dateBooking}</li>
+       <li><b>Giờ:</b> ${appointment.timeBooking}</li>
+     </ul>
+     <p>Vui lòng đến đúng giờ. Cảm ơn bạn đã sử dụng dịch vụ.</p>`
+    );
+
+    res.status(200).json({
+        success: true,
+        message: "Đã xác nhận lịch khám và gửi email cho bệnh nhân.",
+    });
+};
+
 // module.exports.editDoctor = async (req, res, next) => {
 //     try {
 //         const updatedDoctor = await doctorService.editDoctor(

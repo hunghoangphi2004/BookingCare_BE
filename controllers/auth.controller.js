@@ -7,18 +7,73 @@ const validator = require('validator')
 const nodemailer = require('nodemailer')
 const otpGenerator = require('otp-generator')
 const fs = require("fs");
-const {uploadToCloudinary} = require('../utils/cloudinary.util')
+const { uploadToCloudinary } = require('../utils/cloudinary.util')
+const Doctor_user = require("../models/doctor.model.js")
+const Supporter = require("../models/supporter.model.js")
+const Patient = require("../models/patient.model.js")
 
 module.exports.getAllUsers = async (req, res) => {
-    try {
-        const result = await User.find()
+  try {
+    let { page = 1, limit = 10, role } = req.query;
 
-        res.status(200).json({ result, message: 'all users get successfully', success: true })
+    page = Math.max(1, parseInt(page) || 1);
+    limit = Math.max(1, parseInt(limit) || 10);
+    const skip = (page - 1) * limit;
+
+    // build filter
+    const filter = {};
+    if (role) filter.role = role;
+
+    // get users
+    const users = await User.find(filter)
+      .select("-password")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // total count
+    const total = await User.countDocuments(filter);
+
+    // attach roleData
+    const result = [];
+    for (const user of users) {
+      let roleData = null;
+      switch (user.role) {
+        case "doctor":
+          roleData = await Doctor_user.findOne({ userId: user._id.toString() }).lean();
+          break;
+        case "supporter":
+          roleData = await Supporter.findOne({ userId: user._id.toString() }).lean();
+          break;
+        case "patient":
+          roleData = await Patient.findOne({ userId: user._id.toString() }).lean();
+          break;
+      }
+      result.push({ ...user, roleData });
     }
-    catch (error) {
-        res.status(404).json({ message: 'error in getAllUsers - controllers/user.js', error, success: false })
-    }
-}
+
+    res.status(200).json({
+      data: result,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: limit === 0 ? 1 : Math.ceil(total / limit),
+      },
+      success: true,
+    });
+  } catch (err) {
+    console.error("Error in getAllUsers:", err);
+    res.status(500).json({
+      data: [],
+      pagination: { total: 0, page: 1, limit: 10, totalPages: 1 },
+      success: false,
+      message: err.message || "Có lỗi xảy ra khi lấy danh sách người dùng",
+    });
+  }
+};
+
 
 module.exports.sendRegisterOTP = async (req, res) => {
     try {
@@ -161,33 +216,79 @@ module.exports.login = async (req, res) => {
             return res.status(400).json({ message: 'Invalid Credentials', success: false });
         }
 
-        // Tạo token mới
         const token = jwt.sign(
-            { email, _id: existingUser._id, role: existingUser.role }, 
-            process.env.JWT_SECRET
+            { email, _id: existingUser._id, role: existingUser.role },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" }
         );
-        
-        // Kiểm tra và cập nhật token
+
+        const refreshToken = jwt.sign(
+            { _id: existingUser._id },
+            process.env.JWT_REFRESH_SECRET,
+            { expiresIn: "7d" }
+        );
+
         const tokenIndex = existingUser.tokens.findIndex(t => t.name === auth_token);
         if (tokenIndex !== -1) {
-            existingUser.tokens[tokenIndex].token = token; 
+            existingUser.tokens[tokenIndex].token = token;
         } else {
             existingUser.tokens.push({ name: auth_token, token });
         }
 
         await existingUser.save();
 
-        res.status(200).json({ 
-            result: existingUser, 
-            token: token, 
-            message: 'login successfully', 
-            success: true 
+        const responseData = existingUser.toObject();
+        if (existingUser.role === "patient") {
+            const patientProfile = await PatientProfile.findOne({ userId: existingUser._id });
+            responseData.patientProfile = patientProfile || null;
+        }
+
+        res.status(200).json({
+            result: responseData,
+            token: token,
+            refreshToken: refreshToken,
+            message: 'login successfully',
+            success: true
         });
     } catch (error) {
         res.status(500).json({
             message: 'login failed - controllers/user.js',
             error: error.message,
             success: false
+        });
+    }
+};
+
+module.exports.refreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken)
+            return res.status(401).json({ message: "Missing refresh token", success: false });
+
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+        const user = await User.findById(decoded._id);
+        if (!user) {
+            return res.status(404).json({ message: "User không tồn tại", success: false });
+        }
+
+        const newAccessToken = jwt.sign(
+            { _id: user._id, email: user.email, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" } // token sống 15 phút
+        );
+
+        res.status(200).json({
+            success: true,
+            accessToken: newAccessToken,
+            message: "Access token refreshed successfully",
+        });
+    } catch (err) {
+        console.error("refreshToken error:", err.message);
+        return res.status(403).json({
+            success: false,
+            message: "Invalid or expired refresh token",
+            error: err.message,
         });
     }
 };

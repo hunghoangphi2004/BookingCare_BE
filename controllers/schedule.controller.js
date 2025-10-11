@@ -4,6 +4,7 @@ const Schedule = require("../models/schedule.model")
 const PatientProfile = require("../models/patient.model");
 const Appointment = require("../models/appointment.model")
 const User = require("../models/user.model")
+// const scheduleService = require("../services/schedule.service")
 
 module.exports.createAllSchedules = async (req, res, next) => {
     try {
@@ -82,6 +83,19 @@ module.exports.getSchedulesByDoctorAndDate = async (req, res, next) => {
       doctor: data.doctor,
       date: data.date,
       schedules: data.schedules,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.createSchedule = async (req, res, next) => {
+  try {
+    const data = await scheduleService.createSingleSchedule(req.body)
+
+    return res.status(200).json({
+      success: true,
+      data: data
     });
   } catch (err) {
     next(err);

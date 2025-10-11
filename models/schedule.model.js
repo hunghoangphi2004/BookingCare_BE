@@ -7,6 +7,7 @@ const scheduleSchema = new mongoose.Schema(
     time: { type: String, required: true }, // khung giờ
     maxBooking: { type: Number, default: 1 }, // tối đa số bệnh nhân
     sumBooking: { type: Number, default: 0 }, // số đã đặt
+    isBooked: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

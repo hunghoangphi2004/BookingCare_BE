@@ -14,18 +14,17 @@ const {OpenAI} = require("openai")
 const port = process.env.PORT || 3000
 
 database.connect()
-
-
-var viewEngine = require('./config/viewEngine')
-var initWebRoutes = require('./routes/web')
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Accept"],
 }));
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+var viewEngine = require('./config/viewEngine')
+var initWebRoutes = require('./routes/web')
 
 
 viewEngine(app)

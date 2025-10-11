@@ -5,8 +5,9 @@ const { uploadToCloudinary } = require('../utils/cloudinary.util')
 
 module.exports.getAllClinic = async (req, res, next) => {
     try {
-        const result = await clinicService.getAllClinic();
-        return res.status(200).json({ success: true, allClinics: result })
+        const {page=1,limit=10,...filters} = req.query;
+        const result = await clinicService.getAllClinic(filters,parseInt(page),parseInt(limit));
+        return res.status(200).json({ success: true, ...result })
     } catch (err) {
         next(err)
     }
@@ -71,7 +72,6 @@ module.exports.changeStatus = async (req, res) => {
 
 module.exports.getClinicBySlug = async (req,res,next) => {
     const slug = req.params.slug
-    console.log(slug)
 
     try {
         const record = await clinicService.getClinicBySlug(slug);

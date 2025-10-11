@@ -2,12 +2,13 @@ const mongoose = require('mongoose');
 const Specialization = require("../models/specialization.model");
 const specializationService = require("../services/specialization.service")
 const fs = require("fs");
-const {uploadToCloudinary} = require('../utils/cloudinary.util')
+const { uploadToCloudinary } = require('../utils/cloudinary.util')
 
 module.exports.getAllSpec = async (req, res, next) => {
     try {
-        const specs = await specializationService.getAllSpec()
-        return res.status(200).json({ success: true, data: specs })
+        const { page = 1, limit = 10, ...filters } = req.query;
+        const result = await specializationService.getAllSpec(filters, parseInt(page), parseInt(limit))
+        return res.status(200).json({ success: true, ...result })
 
     } catch (err) {
         next(err)
@@ -65,7 +66,7 @@ module.exports.deleteSpecialization = async (req, res, next) => {
     }
 }
 
-module.exports.getSpecializationBySlug = async (req,res,next) => {
+module.exports.getSpecializationBySlug = async (req, res, next) => {
     const slug = req.params.slug
 
     try {
