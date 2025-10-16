@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const PatientProfile = require("../models/patient.model");
 const Appointment = require("../models/appointment.model");
 const Doctor_user = require("../models/doctor.model");
+const User = require("../models/user.model")
 const AppError = require("../utils/appError.util");
 const Schedule = require("../models/schedule.model");
 const { sendEmail } = require("../utils/email.util");
@@ -10,7 +11,6 @@ const moment = require("moment");
 module.exports.createAppointment = async (body, user) => {
   const { doctorId, dateBooking, timeBooking, description } = body;
 
-  // 🔹 Tìm hồ sơ bệnh nhân bằng userId từ token
   const patient = await PatientProfile.findOne({ userId: user._id || user.id });
 
   if (!doctorId) throw new AppError("Thiếu doctorId", 400);
@@ -22,13 +22,11 @@ module.exports.createAppointment = async (body, user) => {
     throw new AppError("doctorId không hợp lệ", 400);
   }
 
-  // 2️⃣ Kiểm tra bác sĩ tồn tại
   const doctor = await Doctor_user.findById(doctorId);
   if (!doctor || doctor.isDeleted) {
     throw new AppError("Không tìm thấy bác sĩ", 404);
   }
 
-  // 3️⃣ Kiểm tra trùng khung giờ
   const confirmedCount = await Appointment.countDocuments({
     doctorId,
     dateBooking,
@@ -40,7 +38,6 @@ module.exports.createAppointment = async (body, user) => {
     throw new AppError("Khung giờ này đã có bệnh nhân khác được xác nhận", 400);
   }
 
-  // 4️⃣ Tạo lịch hẹn
   const newAppointment = new Appointment({
     doctorId,
     patientId: patient._id,
@@ -52,7 +49,6 @@ module.exports.createAppointment = async (body, user) => {
 
   await newAppointment.save();
 
-  // 5️⃣ Cập nhật schedule
   const normalizedTime = timeBooking.replace(/\s/g, "");
   const schedule = await Schedule.findOne({
     doctorId,
@@ -65,7 +61,6 @@ module.exports.createAppointment = async (body, user) => {
   schedule.sumBooking += 1;
   await schedule.save();
 
-  // 6️⃣ Gửi mail thông báo
   console.log("📩 Gửi mail cho:", user.email);
   if (user?.email) {
     await sendEmail(
@@ -95,7 +90,7 @@ module.exports.changeStatusAppointment = async (id, status) => {
     throw new AppError("status không hợp lệ", 400);
   }
 
-   const appointment = await Appointment.findOneAndUpdate(
+  const appointment = await Appointment.findOneAndUpdate(
     { _id: id, isDeleted: false },
     { status },
     { new: true, runValidators: true }
@@ -103,6 +98,31 @@ module.exports.changeStatusAppointment = async (id, status) => {
 
   if (!appointment) {
     throw new AppError("Không tìm thấy lịch hẹn", 404);
+  }
+
+  if (status === "confirmed") {
+    const patient = await PatientProfile.findById(appointment.patientId).populate("userId");
+    const user = await User.findById(patient.userId);
+
+    const doctor = await Doctor_user.findById(appointment.doctorId);
+
+    if (user?.email && doctor) {
+      const email = user.email;
+      const doctorName = doctor.name;
+      const date = moment(appointment.dateBooking).format("DD/MM/YYYY");
+      const time = appointment.timeBooking;
+
+      await sendEmail(
+        email,
+        "Lịch hẹn của bạn đã được xác nhận ✅",
+        `<p>Xin chào ${patient.firstName},</p>
+         <p>Cuộc hẹn của bạn với bác sĩ <b>${doctorName}</b> đã được <b>xác nhận</b>.</p>
+         <p><b>Thời gian:</b> ${time}, ngày ${date}</p>
+         <p>Vui lòng đến đúng giờ hoặc liên hệ nếu cần thay đổi.</p>
+         <br/>
+         <p>Trân trọng,<br/>Phòng khám của chúng tôi.</p>`
+      );
+    }
   }
 
   return appointment;
