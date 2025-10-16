@@ -1,43 +1,38 @@
-const express = require('express')
-const app = express()
-require('dotenv').config()
-const database = require('./config/database')
+const express = require("express");
+const app = express();
+require("dotenv").config();
+const database = require("./config/database");
 const bodyParser = require("body-parser");
-const swaggerUi = require('swagger-ui-express');
-const openapiSpecification = require('./swagger');
-const cors = require('cors') 
-const errorHandler = require("./middlewares/error.middleware")
+const swaggerUi = require("swagger-ui-express");
+const openapiSpecification = require("./swagger");
+const cors = require("cors");
+const errorHandler = require("./middlewares/error.middleware");
 
+const port = process.env.PORT || 3000;
 
-
-const port = process.env.PORT || 3000
-
-database.connect()
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-}));
+database.connect();
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+  })
+);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-var viewEngine = require('./config/viewEngine')
-var initWebRoutes = require('./routes/web')
+var viewEngine = require("./config/viewEngine");
+var initWebRoutes = require("./routes/web");
 
-
-viewEngine(app)
-initWebRoutes(app)
-
-
-
-
+viewEngine(app);
+initWebRoutes(app);
 
 // Swagger Docs
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpecification));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiSpecification));
 
 app.use(errorHandler);
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+  console.log(`Example app listening on port ${port}`);
+});

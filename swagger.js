@@ -1,34 +1,36 @@
-const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerJsdoc = require("swagger-jsdoc");
 const path = require("path");
 
 const options = {
-    failOnErrors: true, 
-    definition: {
-        openapi: '3.0.0',
-        info: {
-            title: 'Hello World',
-            version: '1.0.0',
-        },
-        servers: [
-            {
-                url: process.env.BASE_URL || 'http://localhost:3000',
-                description: 'API Server',
-            },
-        ],
-        components: {
-            securitySchemes: {
-                bearerAuth: { 
-                    type: 'http', 
-                    scheme: 'bearer', 
-                    bearerFormat: 'JWT',
-                }
-            }
-        },
-        security: [{
-            bearerAuth: [], 
-        }]
+  failOnErrors: true,
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Hello World",
+      version: "1.0.0",
     },
-    apis: [path.join(__dirname, './routes/*.js')],
+    servers: [
+      {
+        url: process.env.BASE_URL || "http://localhost:3000",
+        description: "API Server",
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+  },
+  apis: [path.join(__dirname, "./swaggers/*.swagger.js")],
 };
 
 const openapiSpecification = swaggerJsdoc(options);

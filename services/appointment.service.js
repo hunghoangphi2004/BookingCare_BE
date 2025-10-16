@@ -1,8 +1,9 @@
+// services/appointment.service.js
 const mongoose = require("mongoose");
 const PatientProfile = require("../models/patient.model");
 const Appointment = require("../models/appointment.model");
 const Doctor_user = require("../models/doctor.model");
-const User = require("../models/user.model")
+const User = require("../models/user.model");
 const AppError = require("../utils/appError.util");
 const Schedule = require("../models/schedule.model");
 const { sendEmail } = require("../utils/email.util");
@@ -77,15 +78,18 @@ module.exports.createAppointment = async (body, user) => {
 };
 
 module.exports.getAllAppointment = async () => {
-  const appointment = await Appointment.find({ isDeleted: false, status: "pending" });
+  const appointment = await Appointment.find({
+    isDeleted: false,
+    status: "pending",
+  });
   return appointment;
-}
+};
 
 module.exports.changeStatusAppointment = async (id, status) => {
   if (!id) throw new AppError("Thiếu id appointment", 400);
   if (!status) throw new AppError("Thiếu status appointment", 400);
 
-  const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+  const validStatuses = ["pending", "confirmed", "completed", "cancelled"];
   if (!validStatuses.includes(status)) {
     throw new AppError("status không hợp lệ", 400);
   }
@@ -101,7 +105,9 @@ module.exports.changeStatusAppointment = async (id, status) => {
   }
 
   if (status === "confirmed") {
-    const patient = await PatientProfile.findById(appointment.patientId).populate("userId");
+    const patient = await PatientProfile.findById(
+      appointment.patientId
+    ).populate("userId");
     const user = await User.findById(patient.userId);
 
     const doctor = await Doctor_user.findById(appointment.doctorId);

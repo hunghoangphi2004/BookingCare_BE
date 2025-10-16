@@ -1,16 +1,22 @@
-// routes/doctor.routes.js
-const express = require('express');
+// routes/supporter.routes.js
+const express = require("express");
 const router = express.Router();
-const supporterController = require('../controllers/supporter.controller');
-const auth = require('../middlewares/auth.middleware'); 
-const role = require('../middlewares/role.middleware');
-const cloudinary = require('cloudinary').v2
-const streamifier = require('streamifier')
-const upload = require('../middlewares/admin/uploadCloud.middleware')
+const supporterController = require("../controllers/supporter.controller");
+const auth = require("../middlewares/auth.middleware");
+const role = require("../middlewares/role.middleware");
+const cloudinary = require("cloudinary").v2;
+const streamifier = require("streamifier");
+const upload = require("../middlewares/admin/uploadCloud.middleware");
 
 // router.get('/get-all', auth, doctorController.getAllDoctor);
 
-router.post("/create",auth, role("admin"),upload.single("thumbnail") ,supporterController.createSupporter);
+router.post(
+  "/create",
+  auth,
+  role("admin"),
+  upload.single("thumbnail"),
+  supporterController.createSupporter
+);
 
 // router.put("/edit/:id", auth, role("admin", "doctor"), doctorController.editDoctor);
 

@@ -1,11 +1,9 @@
-// routes/doctor.routes.js
-const express = require('express');
+// routes/home.routes.js
+const express = require("express");
 const router = express.Router();
-const homeController = require('../controllers/home.controller');
+const homeController = require("../controllers/home.controller");
 
-
-
-router.get('/', homeController.getHomePage);
+router.get("/", homeController.getHomePage);
 
 // router.post("/create",auth, role("admin"), clinicController.createClinic);
 
