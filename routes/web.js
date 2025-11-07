@@ -8,6 +8,9 @@ const appointmentRoutes = require("./appointment.routes")
 const scheduleRoutes = require("./schedule.routes")
 const supporterRoutes = require("./supporter.routes")
 const patientRoutes = require("./patient.routes")
+const familyRoutes = require("./family.routes")
+const precriptionRoutes = require("./prescription.routes")
+const medicineRoutes = require("./medicine.routes")
 
 let router = express.Router();
 
@@ -19,8 +22,11 @@ let initWebRoutes = (app) => {
     app.use("/", homeRoutes)
     app.use("/appointment", appointmentRoutes)
     app.use("/schedule", scheduleRoutes)
-    app.use("/supporter", supporterRoutes)
-    app.use("/patient", patientRoutes)
+    app.use("/supporters", supporterRoutes)
+    app.use("/patients", patientRoutes)
+    app.use("/family", familyRoutes)
+    app.use("/prescriptions", precriptionRoutes)
+    app.use("/medicines", medicineRoutes)
 
     return app.use("/", router);
 }

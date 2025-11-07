@@ -6,7 +6,7 @@ const Schedule = require("../models/schedule.model")
 const appointmentSchema = new mongoose.Schema({
     doctorId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'DoctorUser',
+        ref: 'Doctor',
         required: true
     },
     patientId: {

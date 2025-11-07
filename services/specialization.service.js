@@ -113,6 +113,21 @@ module.exports.getSpecializationBySlug = async (slug) => {
     return specialization;
 }
 
+module.exports.getSpecializationById = async (id) => {
+    let find = {
+        _id: id,
+        isDeleted: false
+    };
+
+    let specialization = await Specialization.findOne(find);
+    if (!specialization) {
+        throw new AppError("Không tìm thấy chuyên khoa", 404)
+    }
+
+    specialization = await Specialization.findOne(find)
+    return specialization;
+}
+
 
 // module.exports.changeStatus = async (req, res) => {
 //     try {

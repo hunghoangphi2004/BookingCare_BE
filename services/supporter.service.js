@@ -1,43 +1,48 @@
 const mongoose = require('mongoose');
 const User = require("../models/user.model")
 const Supporter = require("../models/supporter.model")
-const Clinic = require("../models/clinic.model")
-const Specialization = require("../models/specialization.model")
 const bcrypt = require("bcryptjs");
 const AppError = require("../utils/appError.util")
 const Appointment = require("../models/appointment.model");
 
+module.exports.getAllSupporter = async (filters = {}, page = 1, limit = 5) => {
+  let find = {};
 
-// module.exports.getAllSupporter = async (role, userId) => {
-//     let find;
-//     let supporters;
-//     if (role === "admin") {
-//         find = { isDeleted: false };
-//     } else {
-//         throw new AppError("Forbidden: Không có quyền", 403);
-//     }
-//     supporters = await Supporter.find(find)
-//         .populate({ path: 'userId', select: 'email role', })
-//     return supporters;
-// };
+  if (filters.keyword) {
+    find.$or = [
+      { firstName: { $regex: filters.keyword, $options: "i" } },
+      { lastName: { $regex: filters.keyword, $options: "i" } },
+      { phoneNumber: { $regex: filters.keyword, $options: "i" } },
+    ];
+  }
 
-// module.exports.getDoctorBySlug = async (slug) => {
-//     let find = {
-//         slug: slug,
-//         isDeleted: false
-//     };
+  page = Math.max(1, parseInt(page) || 1);
+  limit = Math.max(1, parseInt(limit) || 10);
+  const skip = (page - 1) * limit;
 
-//     let doctor = await Doctor_user.findOne(find);
-//     if (!doctor) {
-//         throw new AppError("Không tìm thấy bác sĩ", 404)
-//     }
+  const supporters = await Supporter.find(find)
+    .populate({
+      path: "userId",
+      select: "email role isActive",
+      match: { isDeleted: false }
+    })
+    .skip(limit === 0 ? 0 : skip)
+    .limit(limit === 0 ? 0 : limit)
+    .sort({ createdAt: -1 })
+    .lean();
 
-//     doctor = await Doctor_user.findOne(find)
-//         .populate({ path: 'userId', select: 'email role', })
-//         .populate({ path: 'clinicId', select: 'name address phone description' })
-//         .populate({ path: 'specializationId', select: 'name description' });
-//     return doctor;
-// }
+  const filteredSuppoters = supporters.filter(p => p.userId !== null);
+
+  return {
+    data: filteredSuppoters,
+    pagination: {
+      total: filteredSuppoters.length,
+      page,
+      limit,
+      totalPages: limit === 0 ? 1 : Math.ceil(filteredSuppoters.length / limit),
+    },
+  };
+};
 
 module.exports.createSupporter = async (body) => {
     const { email, name, password, thumbnail, phoneNumber } = body;
@@ -75,100 +80,123 @@ module.exports.createSupporter = async (body) => {
     return { newUser, newSupporter }
 }
 
-// module.exports.editDoctor = async (doctorId, body, userRole, userId) => {
-//     const { phoneNumber, name, licenceNumber, experience, consultationFee, clinicId, specializationId } = body;
+module.exports.editSupporter = async (supporterId, body, userId) => {
+  try {
+    const {
+      email,
+      password,
+      name,
+      phoneNumber,
+      thumbnail
+    } = body;
 
-//     if (!mongoose.Types.ObjectId.isValid(doctorId)) {
-//         throw new AppError("Id không hợp lệ", 400)
-//     }
+    const supporter = await Supporter.findOne({ _id: supporterId })
+    if (!supporter) {
+      throw new AppError("Không tìm thấy hỗ trợ viên", 404)
+    }
+    const user = await User.findOne({ _id: supporter.userId }).select("-tokens")
+    if (!user) {
+      throw new AppError("Không tìm thấy tài khoản liên kết hỗ trợ viên", 404)
+    }
 
-//     const doctor = await Doctor_user.findById(doctorId);
-//     if (!doctor) {
-//         throw new AppError("Không tìm thấy bác sĩ", 404)
-//     }
+    const existingUser = await User.findOne({ _id: { $ne: user._id }, email: email, isDeleted: false });
+    if (existingUser) {
+      throw new AppError('Email này đã tồn tại trong hệ thống');
+    }
 
-//     // Nếu là doctor, chỉ được sửa profile của mình
-//     if (userRole === 'doctor') {
-//         if (doctor.userId.toString() !== userId) {
-//             throw new AppError("Forbidden: Chỉ được sửa profile của mình", 403)
-//         }
-//         if (phoneNumber) doctor.phoneNumber = phoneNumber;
-//         if (licenceNumber) doctor.licenseNumber = licenceNumber;
-//         if (experience) doctor.experience = experience;
-//         if (consultationFee) doctor.consultationFee = consultationFee;
-//     }
-//     // Admin có thể sửa tất cả
-//     else if (userRole === 'admin') {
-//         if (name) doctor.name = name;
-//         if (phoneNumber) doctor.phoneNumber = phoneNumber;
-//         if (licenceNumber) doctor.licenseNumber = licenceNumber;
-//         if (experience) doctor.experience = experience;
-//         if (consultationFee) doctor.consultationFee = consultationFee;
-//         if (clinicId) doctor.clinicId = clinicId;
-//         if (specializationId) doctor.specializationId = specializationId;
-//     } else {
-//         throw new AppError("Forbidden: insufficient role", 403);
-//     }
+    if (email) user.email = email;
+    if (password) user.password = await bcrypt.hash(password, 10);
+    if(phoneNumber) supporter.phoneNumber = phoneNumber;
+    if(name) supporter.name = name;
+    if (thumbnail) supporter.thumbnail = thumbnail;
 
-//     await doctor.save();
+    await user.save();
+    await supporter.save();
 
-//     const updatedDoctor = await Doctor_user.findById(doctorId)
-//         .populate({ path: 'userId', select: 'email role phoneNumber' })
-//         .populate({ path: 'clinicId', select: 'name address phone description image' })
-//         .populate({ path: 'specializationId', select: 'name description image' });
+    return {
+      user,
+      supporter
+    }
+  } catch (error) {
+    throw new AppError(error.message);
+  }
+};
 
-//     return updatedDoctor;
-// }
+module.exports.deleteSupporter = async (supporterId, userId) => {
+  try {
+    const supporter = await Supporter.findOne({ _id: supporterId })
 
-// module.exports.deleteDoctor = async (doctorId) => {
-//     if (!mongoose.Types.ObjectId.isValid(doctorId)) {
-//         throw new AppError("Id không hợp lệ", 400)
-//     }
+    if (!supporter) {
+      throw new AppError("Không tìm thấy hỗ trợ viên", 404)
+    }
+    const user = await User.findOne({ _id: supporter.userId }).select("-tokens")
 
-//     const doctor = await Doctor_user.findById(doctorId);
-//     if (!doctor) {
-//         throw new AppError("Không tìm thấy bác sĩ", 404)
-//     }
+    if (!user) {
+      throw new AppError("Không tìm thấy tài khoản liên kết hỗ trợ viên", 404)
+    }
 
-//     doctor.isDeleted = true;
-//     await doctor.save();
-//     const user = await User.findById(doctor.userId);
-//     if (user) {
-//         user.isDeleted = true;
-//         await user.save();
-//     }
+    if (user.isDeleted) {
+      throw new AppError("Tài khoản này đã bị xóa trước đó", 400);
+    }
 
-//     return { message: "Xoá bác sĩ thành công" };
-// }
+    user.isDeleted = true;
+    await user.save();
 
-// module.exports.changeStatus = async (id, status) => {
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//         throw new AppError("Id không hợp lệ", 400)
-//     }
+    return {
+      message: "Xoá hỗ trợ viên thành công"
+    }
+  } catch (error) {
+    throw new AppError(error.message);
+  }
+};
 
-//     const doctor = await Doctor_user.findById(id);
-//     if (!doctor) {
-//         throw new AppError("Không tìm thấy bác sĩ", 404)
-//     }
+module.exports.changeStatus = async (supporterId, status, userId) => {
+  try {
 
-//     if (status !== "active" && status !== "inactive") {
-//         throw new AppError("Trạng thái phải là 'active' hoặc 'inactive'", 400);
-//     }
+    const supporter = await Supporter.findOne({ _id: supporterId })
 
-//     const user = await User.findById(doctor.userId);
-//     if (!user) {
-//         throw new AppError("Không tìm thấy user liên kết", 404);
-//     }
-//     if (status === "active") {
-//         user.isActive = true
-//     } else {
-//         user.isActive = false
-//     }
+    if (!supporter) {
+      throw new AppError("Không tìm thấy hỗ trợ viên", 404)
+    }
+    const user = await User.findOne({ _id: supporter.userId }).select("-tokens")
 
-//     await user.save();
-//     return { message: `Đã đổi trạng thái bác sĩ thành ${status}` };
-// };
 
-// module.exports.getMyAppointments = async() => {
-    
-// }
+    if (!user) {
+      throw new AppError("Không tìm thấy tài khoản liên kết bệnh nhân", 404)
+    }
+
+
+    const isActive = (status === true || status === "true") ? true : false;
+    user.isActive = isActive
+    await user.save();
+
+    return {
+      message: "Sửa trạng thái hỗ trợ viên thành công"
+    }
+  } catch (error) {
+    throw new AppError(error.message);
+  }
+};
+
+module.exports.getSupporterById = async (supporterId, userId) => {
+  try {
+
+    const supporter = await Supporter.findOne({ _id: supporterId }).select("-createdAt -updatedAt -__v")
+
+    if (!supporter) {
+      throw new AppError("Không tìm thấy hỗ trợ viên", 404)
+    }
+    const user = await User.findOne({ _id: supporter.userId }).select("-tokens -createdAt -updatedAt -__v")
+
+    if (!user) {
+      throw new AppError("Không tìm thấy tài khoản liên kết hỗ trợ viên", 404)
+    }
+
+    return {
+      supporter: supporter,
+      user: user
+    }
+  } catch (error) {
+    throw new AppError(error.message);
+  }
+};

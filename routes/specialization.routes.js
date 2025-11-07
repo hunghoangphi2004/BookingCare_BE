@@ -14,11 +14,13 @@ router.get('/get-all', auth,role("admin"), specializationController.getAllSpec);
 
 router.post("/create",auth, role("admin"),upload.single("image"), specializationController.createSpecialization);
 
-router.put("/edit/:id", auth, role("admin"), specializationController.editSpecialization);
+router.put("/edit/:id", auth, role("admin"),upload.single("image"), specializationController.editSpecialization);
 
 router.delete("/delete/:id", auth, role("admin"), specializationController.deleteSpecialization);
 
 router.get('/:slug', specializationController.getSpecializationBySlug);
+
+router.get('/getSpecializationById/:id', specializationController.getSpecializationById);
 
 // router.patch("/change-status/:status/:id", auth, role("admin"), clinicController.changeStatus);
 

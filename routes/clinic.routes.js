@@ -14,12 +14,14 @@ router.get('/get-all', auth,role("admin"), clinicController.getAllClinic);
 
 router.post("/create",auth, role("admin"),upload.single("image"), clinicController.createClinic);
 
-router.put("/edit/:id", auth, role("admin"), clinicController.editClinic);
+router.put("/edit/:id", auth, role("admin"),upload.single("image"), clinicController.editClinic);
 
 router.delete("/delete/:id", auth, role("admin"), clinicController.deleteClinic);
 
 router.patch("/change-status/:status/:id", auth, role("admin"), clinicController.changeStatus);
 
 router.get('/:slug', clinicController.getClinicBySlug);
+
+router.get('/getClinicById/:id', clinicController.getClinicById);
 
 module.exports = router;

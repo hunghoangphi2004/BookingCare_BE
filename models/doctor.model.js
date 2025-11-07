@@ -1,9 +1,9 @@
-// models/DoctorUser.js
+// models/Doctor.js
 const mongoose = require('mongoose');
 const slugUpdater = require('mongoose-slug-updater');
 
 mongoose.plugin(slugUpdater);
-const doctorUserSchema = new mongoose.Schema({
+const doctorSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -25,10 +25,15 @@ const doctorUserSchema = new mongoose.Schema({
     name: { type: String, required: true },
     slug: { type: String, slug: "name", unique: true },
     thumbnail: String,
-    isDeleted: { type: Boolean, default: false }
+    isDeleted: { type: Boolean, default: false },
+    isFamilyDoctor: {
+        type: Boolean,
+        default: false
+    },
+
 }, {
     timestamps: true,
     strict: true
 });
 
-module.exports = mongoose.model('DoctorUser', doctorUserSchema, 'doctorusers');
+module.exports = mongoose.model('Doctor', doctorSchema, 'doctors');

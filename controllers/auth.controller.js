@@ -13,65 +13,65 @@ const Supporter = require("../models/supporter.model.js")
 const Patient = require("../models/patient.model.js")
 
 module.exports.getAllUsers = async (req, res) => {
-  try {
-    let { page = 1, limit = 10, role } = req.query;
+    try {
+        let { page = 1, limit = 10, role } = req.query;
 
-    page = Math.max(1, parseInt(page) || 1);
-    limit = Math.max(1, parseInt(limit) || 10);
-    const skip = (page - 1) * limit;
+        page = Math.max(1, parseInt(page) || 1);
+        limit = Math.max(1, parseInt(limit) || 10);
+        const skip = (page - 1) * limit;
 
-    // build filter
-    const filter = {};
-    if (role) filter.role = role;
+        // build filter
+        const filter = { isDeleted: false };
+        if (role) filter.role = role;
 
-    // get users
-    const users = await User.find(filter)
-      .select("-password")
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-      .lean();
+        // get users
+        const users = await User.find(filter)
+            .select("-password")
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 })
+            .lean();
 
-    // total count
-    const total = await User.countDocuments(filter);
+        // total count
+        const total = await User.countDocuments(filter);
 
-    // attach roleData
-    const result = [];
-    for (const user of users) {
-      let roleData = null;
-      switch (user.role) {
-        case "doctor":
-          roleData = await Doctor_user.findOne({ userId: user._id.toString() }).lean();
-          break;
-        case "supporter":
-          roleData = await Supporter.findOne({ userId: user._id.toString() }).lean();
-          break;
-        case "patient":
-          roleData = await Patient.findOne({ userId: user._id.toString() }).lean();
-          break;
-      }
-      result.push({ ...user, roleData });
+        // attach roleData
+        const result = [];
+        for (const user of users) {
+            let roleData = null;
+            switch (user.role) {
+                case "doctor":
+                    roleData = await Doctor_user.findOne({ userId: user._id.toString() }).lean();
+                    break;
+                case "supporter":
+                    roleData = await Supporter.findOne({ userId: user._id.toString() }).lean();
+                    break;
+                case "patient":
+                    roleData = await Patient.findOne({ userId: user._id.toString() }).lean();
+                    break;
+            }
+            result.push({ ...user, roleData });
+        }
+
+        res.status(200).json({
+            data: result,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: limit === 0 ? 1 : Math.ceil(total / limit),
+            },
+            success: true,
+        });
+    } catch (err) {
+        console.error("Error in getAllUsers:", err);
+        res.status(500).json({
+            data: [],
+            pagination: { total: 0, page: 1, limit: 10, totalPages: 1 },
+            success: false,
+            message: err.message || "Có lỗi xảy ra khi lấy danh sách người dùng",
+        });
     }
-
-    res.status(200).json({
-      data: result,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: limit === 0 ? 1 : Math.ceil(total / limit),
-      },
-      success: true,
-    });
-  } catch (err) {
-    console.error("Error in getAllUsers:", err);
-    res.status(500).json({
-      data: [],
-      pagination: { total: 0, page: 1, limit: 10, totalPages: 1 },
-      success: false,
-      message: err.message || "Có lỗi xảy ra khi lấy danh sách người dùng",
-    });
-  }
 };
 
 
@@ -415,8 +415,28 @@ module.exports.logout = async (req, res) => {
 module.exports.getProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select("email role");
+        console.log(user)
+
         if (!user) {
             return res.status(404).json({ message: "User không tồn tại" });
+        }
+        if (user.role == "patient") {
+            const patientProfile = await PatientProfile.findOne({ userId: user._id });
+            return res.status(200).json({
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar,
+                patientProfile
+            });
+        }
+        if (user.role == "doctor") {
+            const doctorProfile = await Doctor_user.findOne({ userId: user._id });
+            return res.status(200).json({
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar,
+                doctorProfile
+            });
         }
         res.json({
             email: user.email,

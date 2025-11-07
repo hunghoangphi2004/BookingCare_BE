@@ -51,7 +51,7 @@ module.exports.createClinic = async (body) => {
 }
 
 module.exports.editClinic = async (clinicId, body) => {
-    const { name, address, openingHours, phone, description, image } = body;
+    const { name, address, openingHours, phone, description, image,isActive } = body;
 
     if (!mongoose.Types.ObjectId.isValid(clinicId)) {
         throw new AppError("Id không hợp lệ", 400)
@@ -68,6 +68,15 @@ module.exports.editClinic = async (clinicId, body) => {
     if (phone) clinic.phone = phone;
     if (description) clinic.description = description;
     if (image) clinic.image = image;
+    if (isActive !== undefined) {
+        if (isActive === "true" || isActive === true) {
+            clinic.isActive = true;
+        } else if (isActive === "false" || isActive === false) {
+            clinic.isActive = false;
+        } else {
+            throw new AppError("Giá trị isActive không hợp lệ (chỉ nhận true/false)", 400);
+        }
+    }
 
     await clinic.save();
     const updatedClinic = await Clinic.findById(clinicId)
@@ -119,6 +128,21 @@ module.exports.changeStatus = async (status, id) => {
 module.exports.getClinicBySlug = async (slug) => {
     let find = {
         slug: slug,
+        isDeleted: false
+    };
+
+    let clinic = await Clinic.findOne(find);
+    if (!clinic) {
+        throw new AppError("Không tìm thấy phòng khám", 404)
+    }
+
+    clinic = await Clinic.findOne(find)
+    return clinic;
+}
+
+module.exports.getClinicById = async (id) => {
+    let find = {
+        _id: id,
         isDeleted: false
     };
 

@@ -9,14 +9,15 @@ const supporterService = require("../services/supporter.service")
 const fs = require("fs");
 const { uploadToCloudinary } = require('../utils/cloudinary.util')
 
-// module.exports.getAllDoctor = async (req, res, next) => {
-//     try {
-//         const doctors = await doctorService.getAllDoctor(req.user.role, req.user.id)
-//         return res.json({ success: true, data: doctors });
-//     } catch (err) {
-//         next(err)
-//     }
-// };
+module.exports.getAllSupporter = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 5, ...filters } = req.query;
+    const result = await supporterService.getAllSupporter(filters, parseInt(page), parseInt(limit));
+    return res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+};
 
 module.exports.createSupporter = async (req, res, next) => {
     try {
@@ -77,53 +78,60 @@ module.exports.approveAppointment = async (req, res, next) => {
     });
 };
 
-// module.exports.editDoctor = async (req, res, next) => {
-//     try {
-//         const updatedDoctor = await doctorService.editDoctor(
-//             req.params.id,
-//             req.body,
-//             req.user.role,
-//             req.user.id
-//         )
-//         return res.status(200).json({
-//             success: true,
-//             message: "Doctor updated successfully",
-//             doctor: updatedDoctor
-//         });
-//     } catch (err) {
-//         next(err)
-//     }
-// }
+module.exports.editSupporter = async (req, res, next) => {
+  try {
+    let imageUrl = null;
 
-// module.exports.deleteDoctor = async (req, res, next) => {
-//     try {
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.path, "supporters");
+      imageUrl = result.secure_url;
+      fs.unlinkSync(req.file.path);
+    }
 
-//         const result = await doctorService.deleteDoctor(req.params.id);
+    const updatedSupporter = await supporterService.editSupporter(
+      req.params.id,
+      { ...req.body, thumbnail: imageUrl },
+      req.user.id
+    );
 
-//         return res.status(200).json({ success: true, message: result.message });
-//     } catch (err) {
-//         next(err)
-//     }
-// }
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật thông tin hỗ trợ viên thành công",
+      supporter: updatedSupporter,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
-// module.exports.changeStatus = async (req, res, next) => {
-//     try {
-//         const { status, id } = req.params;
-//         const result = await doctorService.changeStatus(id, status)
-//         return res.status(200).json({ success: true, message: "Đổi trạng thái bác sĩ thành công" });
-//     } catch (err) {
-//         next(err)
-//     }
-// };
+module.exports.deleteSupporter = async (req, res, next) => {
+  try {
+    const result = await supporterService.deleteSupporter(req.params.id,req.user.id);
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (err) {
+    next(err);
+  }
+};
 
-// module.exports.getDoctorBySlug = async (req, res, next) => {
+module.exports.changeStatus = async (req, res) => {
+  try {
+    const result = await supporterService.changeStatus(req.params.id, req.params.status);
+    console.log(req.params.id,req.params.status)
+    return res.status(200).json({ success: true, message: result.message });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Có lỗi xảy ra",
+      Error: err.message,
+    });
+  }
+};
 
-//     const slug = req.params.slug
-
-//     try {
-//         const record = await doctorService.getDoctorBySlug(slug);
-//         return res.status(200).json({ success: true, data: record })
-//     } catch (err) {
-//         next(err)
-//     }
-// }
+module.exports.getSupporterById = async (req, res, next) => {
+  try {
+    const record = await supporterService.getSupporterById(req.params.id);
+    return res.status(200).json({ success: true, data: record });
+  } catch (err) {
+    next(err);
+  }
+};

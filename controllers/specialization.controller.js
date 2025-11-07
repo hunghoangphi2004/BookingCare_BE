@@ -44,7 +44,23 @@ module.exports.createSpecialization = async (req, res, next) => {
 
 module.exports.editSpecialization = async (req, res, next) => {
     try {
-        const updatedSpecialization = await specializationService.editSpecialization(req.params.id, req.body)
+        let imageUrl = null;
+
+        if (req.file) {
+            const result = await uploadToCloudinary(
+                req.file.path,
+                "specializations"
+            );
+            imageUrl = result.secure_url;
+
+            fs.unlinkSync(req.file.path);
+        }
+        const updatedSpecialization = await specializationService.editSpecialization(
+            req.params.id,
+            { ...req.body, image: imageUrl },
+            req.user.role,
+            req.user.id
+        )
         return res.status(200).json({
             success: true,
             message: "Cập nhật chuyên khoa thành công",
@@ -71,6 +87,17 @@ module.exports.getSpecializationBySlug = async (req, res, next) => {
 
     try {
         const record = await specializationService.getSpecializationBySlug(slug);
+        return res.status(200).json({ success: true, data: record })
+    } catch (err) {
+        next(err)
+    }
+}
+
+module.exports.getSpecializationById = async (req, res, next) => {
+    const id = req.params.id
+
+    try {
+        const record = await specializationService.getSpecializationById(id);
         return res.status(200).json({ success: true, data: record })
     } catch (err) {
         next(err)

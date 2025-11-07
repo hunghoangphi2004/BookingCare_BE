@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const patientProfileSchema = new mongoose.Schema({
+const patientSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -41,12 +41,13 @@ const patientProfileSchema = new mongoose.Schema({
         name: { type: String, default: "" },
         phone: { type: String, default: "" },
         relationship: { type: String, default: "" }
-    }
+    },
+    thumbnail: String,
 }, {
     timestamps: true
 });
 
-patientProfileSchema.pre('save', async function(next) {
+patientSchema.pre('save', async function(next) {
     if (this.isNew && !this.patientId) {
         const timestamp = Date.now().toString().slice(-6);
         const random = Math.random().toString(36).substring(2, 4).toUpperCase();
@@ -55,4 +56,4 @@ patientProfileSchema.pre('save', async function(next) {
     next();
 });
 
-module.exports = mongoose.model('PatientProfile', patientProfileSchema);
+module.exports = mongoose.model('Patient', patientSchema,"patients");

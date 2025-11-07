@@ -11,7 +11,6 @@ const supporterSchema = new mongoose.Schema({
     name: String,
     phoneNumber: String,
     thumbnail: String,
-    isDeleted: { type: Boolean, default: false }
 }, {
     timestamps: true,
     strict: true

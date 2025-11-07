@@ -61,7 +61,7 @@ module.exports.createAllDoctorsSchedule = async () => {
             doctorId: doctor._id,
             date: day,
             time: time,
-            maxBooking: 1, // mỗi ca 1 bệnh nhân
+            maxBooking: 1, 
             sumBooking: 0,
           });
         });

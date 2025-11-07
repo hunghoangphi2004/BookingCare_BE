@@ -8,9 +8,17 @@ const cloudinary = require('cloudinary').v2
 const streamifier = require('streamifier')
 const upload = require('../middlewares/admin/uploadCloud.middleware')
 
-// router.get('/get-all', auth, doctorController.getAllDoctor);
+router.get('/get-all', auth, supporterController.getAllSupporter);
 
 router.post("/create",auth, role("admin"),upload.single("thumbnail") ,supporterController.createSupporter);
+
+router.get('/get-supporter-by-id/:id', auth, supporterController.getSupporterById);
+
+router.patch("/edit/:id",auth, role("admin"),upload.single("thumbnail") ,supporterController.editSupporter);
+
+router.delete("/delete/:id",auth, role("admin") ,supporterController.deleteSupporter);
+
+router.patch("/change-status/:id/:status", auth, role("admin"), supporterController.changeStatus);
 
 // router.put("/edit/:id", auth, role("admin", "doctor"), doctorController.editDoctor);
 
