@@ -13,13 +13,23 @@ const adminRoute = require('./routes/admin/index.route.js')
 const port = process.env.PORT || 3000
 
 database.connect()
+const allowedOrigins = [
+  "http://localhost:3006", // dev
+  "https://booking-care-51ho636h9-hungs-projects-88cb76d9.vercel.app" // production Vercel
+];
+
 app.use(cors({
-  origin: "http://localhost:3006", 
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error("Not allowed by CORS"))
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Accept"],
 }));
-
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
