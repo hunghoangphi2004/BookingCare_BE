@@ -15,7 +15,9 @@ const port = process.env.PORT || 3000
 database.connect()
 const allowedOrigins = [
   "http://localhost:3006", // dev
-  "https://booking-care-51ho636h9-hungs-projects-88cb76d9.vercel.app" // production Vercel
+  "https://booking-care-fe-8k8u.vercel.app", 
+  "https://booking-care-fe-8k8u-git-main-hungs-projects-88cb76d9.vercel.app",
+  "https://booking-care-fe-8k8u-8atzjrhua-hungs-projects-88cb76d9.vercel.app"
 ];
 
 app.use(cors({
