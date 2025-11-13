@@ -8,76 +8,81 @@ const Appointment = require("../models/appointment.model");
 module.exports.getAllSupporter = async (filters = {}, page = 1, limit = 5) => {
   let find = {};
 
+  // lọc theo từ khóa
   if (filters.keyword) {
     find.$or = [
-      { firstName: { $regex: filters.keyword, $options: "i" } },
-      { lastName: { $regex: filters.keyword, $options: "i" } },
+      { name: { $regex: filters.keyword, $options: "i" } },
       { phoneNumber: { $regex: filters.keyword, $options: "i" } },
     ];
   }
+
+  // chỉ lấy supporter có userId
+  find.userId = { $ne: null };
 
   page = Math.max(1, parseInt(page) || 1);
   limit = Math.max(1, parseInt(limit) || 10);
   const skip = (page - 1) * limit;
 
+  // Lấy tổng số bản ghi
+  const total = await Supporter.countDocuments(find);
+
   const supporters = await Supporter.find(find)
     .populate({
       path: "userId",
       select: "email role isActive",
-      match: { isDeleted: false }
+      match: { isDeleted: false },
     })
-    .skip(limit === 0 ? 0 : skip)
-    .limit(limit === 0 ? 0 : limit)
+    .skip(skip)
+    .limit(limit)
     .sort({ createdAt: -1 })
     .lean();
 
-  const filteredSuppoters = supporters.filter(p => p.userId !== null);
-
   return {
-    data: filteredSuppoters,
+    data: supporters,
     pagination: {
-      total: filteredSuppoters.length,
+      total,
       page,
       limit,
-      totalPages: limit === 0 ? 1 : Math.ceil(filteredSuppoters.length / limit),
+      totalPages: Math.ceil(total / limit),
     },
   };
 };
 
+
 module.exports.createSupporter = async (body) => {
-    const { email, name, password, thumbnail, phoneNumber } = body;
+  const { email, name, password, thumbnail, phoneNumber } = body;
 
-    if (!email) {
-        throw new AppError("Email là bắt buộc", 400);
-    }
-    if (!name) {
-        throw new AppError("Name là bắt buộc", 400);
-    }
-    if (!password) {
-        throw new AppError("Password là bắt buộc", 400);
-    }
+  if (!email) {
+    throw new AppError("Email là bắt buộc", 400);
+  }
+  if (!name) {
+    throw new AppError("Name là bắt buộc", 400);
+  }
+  if (!password) {
+    throw new AppError("Password là bắt buộc", 400);
+  }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-        throw new AppError("Email đã tồn tại", 409);
-    }
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw new AppError("Email đã tồn tại", 409);
+  }
 
-    let newUser = new User();
-    newUser.email = email;
-    newUser.password = bcrypt.hashSync(password, 8);
-    newUser.role = 'supporter';
-    newUser.isDeleted = false;
-    await newUser.save();
+  let newUser = new User();
+  newUser.email = email;
+  newUser.password = bcrypt.hashSync(password, 8);
+  newUser.role = 'supporter';
+  newUser.isDeleted = false;
+  await newUser.save();
 
-    let newSupporter = new Supporter();
-    newSupporter.userId = newUser._id;
-    newSupporter.name = name;
-    newSupporter.phoneNumber = phoneNumber;
-    newSupporter.thumbnail = thumbnail,
+  let newSupporter = new Supporter();
+  newSupporter.userId = newUser._id;
+  newSupporter.name = name;
+  newSupporter.phoneNumber = phoneNumber;
+  newSupporter.thumbnail = thumbnail,
     newSupporter.isDeleted = false;
 
-    await newSupporter.save();
-    return { newUser, newSupporter }
+  await newSupporter.save();
+  return { newUser, newSupporter }
 }
 
 module.exports.editSupporter = async (supporterId, body, userId) => {
@@ -106,8 +111,8 @@ module.exports.editSupporter = async (supporterId, body, userId) => {
 
     if (email) user.email = email;
     if (password) user.password = await bcrypt.hash(password, 10);
-    if(phoneNumber) supporter.phoneNumber = phoneNumber;
-    if(name) supporter.name = name;
+    if (phoneNumber) supporter.phoneNumber = phoneNumber;
+    if (name) supporter.name = name;
     if (thumbnail) supporter.thumbnail = thumbnail;
 
     await user.save();
@@ -166,8 +171,16 @@ module.exports.changeStatus = async (supporterId, status, userId) => {
     }
 
 
-    const isActive = (status === true || status === "true") ? true : false;
-    user.isActive = isActive
+    if (status !== "active" && status !== "inactive") {
+      throw new AppError("Trạng thái phải là 'active' hoặc 'inactive'", 400);
+    }
+
+    if (status === "active") {
+      user.isActive = true;
+    } else {
+      user.isActive = false;
+    }
+
     await user.save();
 
     return {

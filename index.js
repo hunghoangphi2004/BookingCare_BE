@@ -3,37 +3,34 @@ const app = express()
 require('dotenv').config()
 const database = require('./config/database')
 const bodyParser = require("body-parser");
+const cookieParser = require('cookie-parser');
 const swaggerUi = require('swagger-ui-express');
 const openapiSpecification = require('./swagger');
-const cors = require('cors') 
+const cors = require('cors')
 const errorHandler = require("./middlewares/error.middleware")
-
-
-
+const route = require('./routes/client/index.route.js')
+const adminRoute = require('./routes/admin/index.route.js')
 const port = process.env.PORT || 3000
 
 database.connect()
 app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT","PATCH", "DELETE", "OPTIONS"],
+  origin: "http://localhost:3006", 
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Accept"],
 }));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(cookieParser());
 
 var viewEngine = require('./config/viewEngine')
-var initWebRoutes = require('./routes/web')
 
 
 viewEngine(app)
-initWebRoutes(app)
+route(app)
+adminRoute(app)
 
-
-
-
-
-// Swagger Docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiSpecification));
 
 app.use(errorHandler);

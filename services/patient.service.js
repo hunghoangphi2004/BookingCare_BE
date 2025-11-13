@@ -19,30 +19,30 @@ module.exports.getAllPatient = async (filters = {}, page = 1, limit = 10) => {
   limit = Math.max(1, parseInt(limit) || 10);
   const skip = (page - 1) * limit;
 
-  const total = await Patient.countDocuments(find);
-  const patients = await Patient.find(find)
+  const allPatients = await Patient.find(find)
     .populate({
       path: "userId",
-      select: "email role isActive",
-      match: { isDeleted: false }
+      select: "email role isActive isDeleted",
     })
-    .skip(limit === 0 ? 0 : skip)
-    .limit(limit === 0 ? 0 : limit)
     .sort({ createdAt: -1 })
     .lean();
 
-  const filteredPatients = patients.filter(p => p.userId !== null);
+  const filteredPatients = allPatients.filter(p => p.userId && !p.userId.isDeleted);
+
+  const total = filteredPatients.length;
+  const paginated = filteredPatients.slice(skip, skip + limit);
 
   return {
-    data: filteredPatients,
+    data: paginated,
     pagination: {
-      total: filteredPatients.length,
+      total,
       page,
       limit,
-      totalPages: limit === 0 ? 1 : Math.ceil(filteredPatients.length / limit),
+      totalPages: Math.ceil(total / limit),
     },
   };
 };
+
 
 module.exports.createPatient = async (data) => {
   try {
@@ -195,9 +195,16 @@ module.exports.changeStatus = async (patientId, status, userId) => {
       throw new AppError("Không tìm thấy tài khoản liên kết bệnh nhân", 404)
     }
 
+    if (status !== "active" && status !== "inactive") {
+            throw new AppError("Trạng thái phải là 'active' hoặc 'inactive'", 400);
+        }
+    
+        if (status === "active") {
+            user.isActive = true;
+        } else {
+            user.isActive = false;
+        }
 
-    const isActive = (status === true || status === "true") ? true : false;
-    user.isActive = isActive
     await user.save();
 
     return {
@@ -216,7 +223,7 @@ module.exports.getPatientById = async (patientId, userId) => {
     if (!patient) {
       throw new AppError("Không tìm thấy bệnh nhân", 404)
     }
-    const user = await User.findOne({ _id: patient.userId }).select("-tokens -createdAt -updatedAt -__v")
+    const user = await User.findOne({ _id: patient.userId }).select("-token -createdAt -updatedAt -__v")
 
     if (!user) {
       throw new AppError("Không tìm thấy tài khoản liên kết bệnh nhân", 404)

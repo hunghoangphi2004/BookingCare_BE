@@ -1,0 +1,30 @@
+const systemConfig = require('../../config/system');
+const authMiddleware = require("../../middlewares/admin/auth.middleware.js")
+const authRoutes = require("./auth.routes.js")
+const clinicRoutes = require("./clinic.routes.js")
+const specializationRoutes = require("./specialization.routes.js")
+const doctorRoutes = require("./doctor.routes.js")
+const patientRoutes = require("./patient.routes.js")
+const appointmentRoutes = require("./appointment.routes.js")
+const scheduleRoutes = require("./schedule.routes.js")
+const familiesRoutes = require("./family.routes.js")
+const prescriptionsRoutes = require("./prescription.routes.js")
+const supporterRoutes = require("./supporter.routes.js")
+const medicineRoutes = require("./medicine.routes.js")
+const roleRoutes = require("./role.routes.js")
+
+module.exports = (app) => {
+    const PATH_ADMIN = systemConfig.prefixAdmin;
+    app.use(PATH_ADMIN + "/auth", authRoutes)
+    app.use(PATH_ADMIN + "/clinics", authMiddleware.requireAuth, clinicRoutes)
+    app.use(PATH_ADMIN + "/specializations", authMiddleware.requireAuth, specializationRoutes)
+    app.use(PATH_ADMIN + "/doctors", authMiddleware.requireAuth, doctorRoutes)
+    app.use(PATH_ADMIN + "/patients", authMiddleware.requireAuth, patientRoutes)
+    app.use(PATH_ADMIN + "/appointments", authMiddleware.requireAuth, appointmentRoutes)
+    app.use(PATH_ADMIN + "/schedules", authMiddleware.requireAuth, scheduleRoutes)
+    app.use(PATH_ADMIN + "/families", authMiddleware.requireAuth, familiesRoutes)
+    app.use(PATH_ADMIN + "/prescriptions", authMiddleware.requireAuth, prescriptionsRoutes)
+    app.use(PATH_ADMIN + "/supporters", authMiddleware.requireAuth, supporterRoutes)
+    app.use(PATH_ADMIN + "/medicines", authMiddleware.requireAuth, medicineRoutes)
+    app.use(PATH_ADMIN + "/roles", authMiddleware.requireAuth, roleRoutes)
+}

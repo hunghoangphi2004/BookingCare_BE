@@ -11,7 +11,7 @@ const appointmentSchema = new mongoose.Schema({
     },
     patientId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'PatientProfile',
+        ref: 'Patient',
         required: true
     },
     status: {

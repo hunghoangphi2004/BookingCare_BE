@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken')
+const generate = require("../helpers/generate")
 
 const UserSchema = new mongoose.Schema(
     {
@@ -20,9 +20,9 @@ const UserSchema = new mongoose.Schema(
             type: Boolean,
             default: true
         },
-        tokens: {
-            type: [{ name: String, token: String }],
-            default:[]
+        token: {
+            type: String,
+            default: () => generate.generateRandomString(20)
         },
         createdAt: Date,
         isDeleted: { type: Boolean, default: false }
@@ -33,19 +33,6 @@ const UserSchema = new mongoose.Schema(
     }
 );
 
-UserSchema.methods.generateAuthToken = async function () {
-    const token = jwt.sign({
-        _id: this._id,
-        email: this.email,
-        password: this.password
-    }, process.env.AUTH_TOKEN_SECRET_KEY)
-
-    const index = this.tokens.findIndex(token => token.name == 'auth_token')
-
-    if (index == -1) this.tokens = this.tokens.concat({ name: 'auth_token', token })        // auth_token should only be 1
-
-    return token
-}
 
 const userModel = mongoose.model('User', UserSchema, 'users')
 

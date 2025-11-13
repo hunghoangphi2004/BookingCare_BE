@@ -6,9 +6,15 @@ const Patient = require('../models/patient.model');
 const Doctor = require('../models/doctor.model');
 const { createPrescriptionPdf } = require('../utils/pdf.util');
 const { sendEmail } = require('../utils/email.util');
+require('../models/medicine.model');
 
 module.exports.getAllPrescription = async (filters = {}, page = 1, limit = 5) => {
-    let find = {isDeleted: false};
+    let find = { isDeleted: false };
+
+    if (filters.userId) {
+        const doctor = await Doctor.findOne({isDeleted: false,userId: filters.userId})
+        find.doctorId = doctor._id
+    }
 
     if (filters.keyword) {
         const keywordRegex = { $regex: filters.keyword, $options: "i" };
@@ -44,7 +50,11 @@ module.exports.getAllPrescription = async (filters = {}, page = 1, limit = 5) =>
         })
         .populate({
             path: 'patientId',
-            select: 'firstName lastName phoneNumber gender dateOfBirth'
+            select: 'firstName lastName phoneNumber gender dateOfBirth userId',
+            populate: {
+                path: 'userId',
+                select: 'email isActive role'
+            }
         })
         .skip(limit === 0 ? 0 : skip)
         .limit(limit === 0 ? 0 : limit)

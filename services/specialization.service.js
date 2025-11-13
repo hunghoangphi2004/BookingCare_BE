@@ -17,7 +17,7 @@ module.exports.getAllSpec = async (filters = {}, page = 1, limit = 10) => {
 
         const total = await Specialization.countDocuments(find);
 
-        const specs = await Specialization.find(find)
+        const specs = await Specialization.find(find).select("-__v")
             .skip(limit == 0 ? 0 : skip)
             .limit(limit == 0 ? 0 : limit)
             .sort({ createdAt: -1 }) 
@@ -50,6 +50,11 @@ module.exports.createSpecialization = async (body) => {
         throw new AppError("Bắt buộc ảnh", 400);
     }
 
+    const spe = await Specialization.findOne({name: name})
+    if(spe) {
+        throw new AppError("Trùng tên chuyên khoa", 400);
+    }
+
     let newSpecialization = new Specialization();
     newSpecialization.name = name;
     newSpecialization.description = description;
@@ -69,6 +74,11 @@ module.exports.editSpecialization = async (specializationId, body) => {
     const specialization = await Specialization.findById(specializationId);
     if (!specialization) {
         throw new AppError("Không tìm thấy chuyên khoa", 404)
+    }
+
+    const spe = await Specialization.findOne({name: name})
+    if(spe) {
+        throw new AppError("Trùng tên chuyên khoa", 400);
     }
 
     if (name) specialization.name = name;

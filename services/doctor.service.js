@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const User = require("../models/user.model")
-const Doctor_user = require("../models/doctor.model")
+const Doctor = require("../models/doctor.model")
 const Clinic = require("../models/clinic.model")
 const Specialization = require("../models/specialization.model")
 const bcrypt = require("bcryptjs");
@@ -10,14 +10,7 @@ const Appointment = require("../models/appointment.model");
 
 
 module.exports.getAllDoctor = async (role, userId, filters = {}, page = 1, limit = 10) => {
-    let find;
-    if (role === "admin") {
-        find = { isDeleted: false };
-    } else if (role === "doctor") {
-        find = { isDeleted: false, userId: userId };
-    } else {
-        throw new AppError("Forbidden: Không có quyền", 403);
-    }
+    let find = { isDeleted: false };
 
     if (filters.specializationId) find.specializationId = filters.specializationId
     if (filters.clinicId) find.clinicId = filters.clinicId
@@ -30,7 +23,7 @@ module.exports.getAllDoctor = async (role, userId, filters = {}, page = 1, limit
     const skip = (page - 1) * limit;
 
 
-    let doctors = await Doctor_user.find(find)
+    let doctors = await Doctor.find(find)
         .populate({ path: 'userId', select: 'email role', })
         .populate({ path: 'clinicId', select: 'name address phone description image' })
         .populate({ path: 'specializationId', select: 'name description image' })
@@ -38,7 +31,7 @@ module.exports.getAllDoctor = async (role, userId, filters = {}, page = 1, limit
         .limit(limit == 0 ? 0 : limit)
         .lean()
 
-    let total = await Doctor_user.countDocuments(find)
+    let total = await Doctor.countDocuments(find)
 
 
     return {
@@ -66,7 +59,7 @@ module.exports.getAllFamilyDoctors = async (filters = {}, page = 1, limit = 10) 
         limit = Math.max(1, parseInt(limit) || 10);
         const skip = (page - 1) * limit;
 
-        const doctors = await Doctor_user.find(find)
+        const doctors = await Doctor.find(find)
             .populate({ path: 'userId', select: 'email role' })
             .populate({ path: 'clinicId', select: 'name address phone description image' })
             .populate({ path: 'specializationId', select: 'name description image' })
@@ -75,9 +68,7 @@ module.exports.getAllFamilyDoctors = async (filters = {}, page = 1, limit = 10) 
             .sort({ createdAt: -1 })
             .lean();
 
-        console.log("doctors:", doctors);
-
-        const total = await Doctor_user.countDocuments(find);
+        const total = await Doctor.countDocuments(find);
 
         return {
             success: true,
@@ -101,12 +92,12 @@ module.exports.getDoctorBySlug = async (slug) => {
         isDeleted: false
     };
 
-    let doctor = await Doctor_user.findOne(find);
+    let doctor = await Doctor.findOne(find);
     if (!doctor) {
         throw new AppError("Không tìm thấy bác sĩ", 404)
     }
 
-    doctor = await Doctor_user.findOne(find)
+    doctor = await Doctor.findOne(find)
         .populate({ path: 'userId', select: 'email role', })
         .populate({ path: 'clinicId', select: 'name address phone description' })
         .populate({ path: 'specializationId', select: 'name description' });
@@ -119,13 +110,12 @@ module.exports.getDoctorById = async (id) => {
         isDeleted: false
     };
 
-    let doctor = await Doctor_user.findOne(find);
-    console.log("doctor:", doctor);
+    let doctor = await Doctor.findOne(find);
     if (!doctor) {
         throw new AppError("Không tìm thấy bác sĩ", 404)
     }
 
-    doctor = await Doctor_user.findOne(find)
+    doctor = await Doctor.findOne(find)
         .populate({ path: 'userId', select: 'email role', })
         .populate({ path: 'clinicId', select: 'name address phone description' })
         .populate({ path: 'specializationId', select: 'name description' });
@@ -156,7 +146,7 @@ module.exports.createDoctor = async (body) => {
     newUser.isDeleted = false;
     await newUser.save();
 
-    let newDoctor = new Doctor_user();
+    let newDoctor = new Doctor();
     newDoctor.userId = newUser._id;
     newDoctor.licenseNumber = licenseNumber;
     newDoctor.name = name;
@@ -179,7 +169,7 @@ module.exports.editDoctor = async (doctorId, body, userRole, userId) => {
         throw new AppError("Id không hợp lệ", 400)
     }
 
-    const doctor = await Doctor_user.findById(doctorId);
+    const doctor = await Doctor.findById(doctorId);
     if (!doctor) {
         throw new AppError("Không tìm thấy bác sĩ", 404)
     }
@@ -216,7 +206,7 @@ module.exports.editDoctor = async (doctorId, body, userRole, userId) => {
 
     await doctor.save();
 
-    const updatedDoctor = await Doctor_user.findById(doctorId)
+    const updatedDoctor = await Doctor.findById(doctorId)
         .populate({ path: 'userId', select: 'email role phoneNumber' })
         .populate({ path: 'clinicId', select: 'name address phone description image' })
         .populate({ path: 'specializationId', select: 'name description image' });
@@ -229,7 +219,7 @@ module.exports.deleteDoctor = async (doctorId) => {
         throw new AppError("Id không hợp lệ", 400)
     }
 
-    const doctor = await Doctor_user.findById(doctorId);
+    const doctor = await Doctor.findById(doctorId);
     if (!doctor) {
         throw new AppError("Không tìm thấy bác sĩ", 404)
     }
@@ -250,7 +240,7 @@ module.exports.changeStatus = async (id, status) => {
         throw new AppError("Id không hợp lệ", 400)
     }
 
-    const doctor = await Doctor_user.findById(id);
+    const doctor = await Doctor.findById(id);
     if (!doctor) {
         throw new AppError("Không tìm thấy bác sĩ", 404)
     }
@@ -277,8 +267,8 @@ module.exports.getMyAppointments = async () => {
 
 }
 
-module.exports.approveFamilyDoctorService = async (Doctor_userId, familyId) => {
-    const doctor = await Doctor_user.findOne({ userId: Doctor_userId });
+module.exports.approveFamilyDoctorService = async (DoctorId, familyId) => {
+    const doctor = await Doctor.findOne({ userId: DoctorId });
     if (!doctor) throw new AppError('Không tìm thấy hồ sơ bác sĩ', 404);
 
     const family = await Family.findById(familyId);
@@ -303,8 +293,8 @@ module.exports.approveFamilyDoctorService = async (Doctor_userId, familyId) => {
     };
 };
 
-module.exports.rejectFamilyDoctor = async (Doctor_userId, familyId, reason) => {
-    const doctor = await Doctor_user.findOne({ userId: Doctor_userId });
+module.exports.rejectFamilyDoctor = async (DoctorId, familyId, reason) => {
+    const doctor = await Doctor.findOne({ userId: DoctorId });
     if (!doctor) throw new AppError('Không tìm thấy hồ sơ bác sĩ', 404);
 
     const family = await Family.findById(familyId);
@@ -329,8 +319,8 @@ module.exports.rejectFamilyDoctor = async (Doctor_userId, familyId, reason) => {
     };
 };
 
-module.exports.cancelFamilyDoctor = async (Doctor_userId, familyId) => {
-    const doctor = await Doctor_user.findOne({ userId: Doctor_userId });
+module.exports.cancelFamilyDoctor = async (DoctorId, familyId) => {
+    const doctor = await Doctor.findOne({ userId: DoctorId });
     if (!doctor) throw new AppError('Không tìm thấy hồ sơ bác sĩ', 404);
 
     const family = await Family.findById(familyId);
@@ -358,7 +348,7 @@ module.exports.getFamilyRequestsForDoctor = async (role, userId, filters = {}, p
     let doctor;
 
     if (role === 'doctor') {
-        doctor = await Doctor_user.findOne({ userId });
+        doctor = await Doctor.findOne({ userId });
         if (!doctor) throw new AppError('Không tìm thấy hồ sơ bác sĩ', 404);
     } else if (role === 'admin') {
         // admin có thể xem tất cả

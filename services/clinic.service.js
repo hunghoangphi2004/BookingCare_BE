@@ -15,7 +15,7 @@ module.exports.getAllClinic = async (filters = {}, page = 1, limit = 10) => {
 
     const total = await Clinic.countDocuments(find);
 
-    const clinics = await Clinic.find(find)
+    const clinics = await Clinic.find(find).select("-__v")
         .skip(limit == 0 ? 0 : skip)
         .limit(limit == 0 ? 0 : limit)
         .sort({ createdAt: -1 })

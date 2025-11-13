@@ -1,5 +1,5 @@
 const moment = require("moment");
-const Doctor_user = require("../models/doctor.model");
+const Doctor = require("../models/doctor.model");
 const Schedule = require("../models/schedule.model"); // cần tạo model Schedule
 const AppError = require("../utils/appError.util");
 
@@ -35,7 +35,7 @@ module.exports.createAllDoctorsSchedule = async () => {
     }
 
     // Lấy tất cả bác sĩ
-    const doctors = await Doctor_user.find({ isDeleted: false }).select("_id");
+    const doctors = await Doctor.find({ isDeleted: false }).select("_id");
 
     if (!doctors || doctors.length === 0) {
       throw new AppError("Không có bác sĩ nào trong hệ thống", 404);
@@ -61,7 +61,7 @@ module.exports.createAllDoctorsSchedule = async () => {
             doctorId: doctor._id,
             date: day,
             time: time,
-            maxBooking: 1, 
+            maxBooking: 1,
             sumBooking: 0,
           });
         });
@@ -77,7 +77,7 @@ module.exports.createAllDoctorsSchedule = async () => {
 };
 module.exports.getSchedulesByDoctorAndDate = async (slug, date) => {
   const formattedDate = moment(date, ["DD-MM-YYYY", "DD/MM/YYYY"]).format("DD/MM/YYYY");
-  const doctor = await Doctor_user.findOne({ slug, isDeleted: false });
+  const doctor = await Doctor.findOne({ slug, isDeleted: false });
   if (!doctor) throw new AppError("Không tìm thấy bác sĩ với slug này", 404);
 
   const schedules = await Schedule.find({
@@ -105,10 +105,10 @@ module.exports.getSchedulesByDoctorAndDate = async (slug, date) => {
 };
 
 module.exports.createSingleSchedule = async (body) => {
-  const {doctorId,date, schedules} = body;
-  console.log(doctorId,date)
+  const { doctorId, date, schedules } = body;
+  console.log(doctorId, date)
   let doctorSchedules = [];
-  for(const item of schedules){
+  for (const item of schedules) {
     let newSchedule = new Schedule()
     newSchedule.doctorId = doctorId;
     newSchedule.date = date;

@@ -1,17 +1,20 @@
 const mongoose = require("mongoose");
-const PatientProfile = require("../models/patient.model");
+const Patient = require("../models/patient.model");
 const Appointment = require("../models/appointment.model");
-const Doctor_user = require("../models/doctor.model");
+const Doctor = require("../models/doctor.model");
 const User = require("../models/user.model")
 const AppError = require("../utils/appError.util");
 const Schedule = require("../models/schedule.model");
 const { sendEmail } = require("../utils/email.util");
 const moment = require("moment");
 
-module.exports.createAppointment = async (body, user) => {
-  const { doctorId, dateBooking, timeBooking, description } = body;
+module.exports.createAppointment = async (body,id) => {
+  const {doctorId, dateBooking, timeBooking, description } = body;
 
-  const patient = await PatientProfile.findOne({ userId: user._id || user.id });
+  const user = await User.findOne({ _id: id }).select("email");
+  const patient = await Patient.findOne({ userId: user._id });
+  console.log(user, patient)
+
 
   if (!doctorId) throw new AppError("Thiếu doctorId", 400);
   if (!patient) throw new AppError("Không tìm thấy hồ sơ bệnh nhân", 400);
@@ -22,7 +25,7 @@ module.exports.createAppointment = async (body, user) => {
     throw new AppError("doctorId không hợp lệ", 400);
   }
 
-  const doctor = await Doctor_user.findById(doctorId);
+  const doctor = await Doctor.findById(doctorId);
   if (!doctor || doctor.isDeleted) {
     throw new AppError("Không tìm thấy bác sĩ", 404);
   }
@@ -33,10 +36,24 @@ module.exports.createAppointment = async (body, user) => {
     timeBooking,
     status: "confirmed",
   });
-
   if (confirmedCount >= 1) {
     throw new AppError("Khung giờ này đã có bệnh nhân khác được xác nhận", 400);
   }
+
+
+  const pendingCount = await Appointment.countDocuments({
+    patientId: patient.id,
+    doctorId,
+    dateBooking,
+    timeBooking,
+    status: "pending",
+  });
+
+  if (pendingCount >= 1) {
+    throw new AppError("Bạn đã đặt khung giờ này rồi, vui lòng chờ xác nhận từ hệ thống", 400);
+  }
+
+
 
   const newAppointment = new Appointment({
     doctorId,
@@ -61,7 +78,7 @@ module.exports.createAppointment = async (body, user) => {
   schedule.sumBooking += 1;
   await schedule.save();
 
-  console.log("📩 Gửi mail cho:", user.email);
+  console.log("Gửi mail cho:", user.email);
   if (user?.email) {
     await sendEmail(
       user.email,
@@ -101,10 +118,10 @@ module.exports.changeStatusAppointment = async (id, status) => {
   }
 
   if (status === "confirmed") {
-    const patient = await PatientProfile.findById(appointment.patientId).populate("userId");
+    const patient = await Patient.findById(appointment.patientId).populate("userId");
     const user = await User.findById(patient.userId);
 
-    const doctor = await Doctor_user.findById(appointment.doctorId);
+    const doctor = await Doctor.findById(appointment.doctorId);
 
     if (user?.email && doctor) {
       const email = user.email;
