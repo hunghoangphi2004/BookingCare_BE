@@ -12,6 +12,7 @@ const prescriptionsRoutes = require("./prescription.routes.js")
 const supporterRoutes = require("./supporter.routes.js")
 const medicineRoutes = require("./medicine.routes.js")
 const roleRoutes = require("./role.routes.js")
+const dashboardRoutes = require("./dashboard.routes.js")
 
 module.exports = (app) => {
     const PATH_ADMIN = systemConfig.prefixAdmin;
@@ -27,4 +28,5 @@ module.exports = (app) => {
     app.use(PATH_ADMIN + "/supporters", authMiddleware.requireAuth, supporterRoutes)
     app.use(PATH_ADMIN + "/medicines", authMiddleware.requireAuth, medicineRoutes)
     app.use(PATH_ADMIN + "/roles", authMiddleware.requireAuth, roleRoutes)
+    app.use(PATH_ADMIN + "/dashboard", authMiddleware.requireAuth, dashboardRoutes)
 }

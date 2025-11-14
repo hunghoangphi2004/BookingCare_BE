@@ -25,7 +25,6 @@ const doctorSchema = new mongoose.Schema({
     name: { type: String, required: true },
     slug: { type: String, slug: "name", unique: true },
     thumbnail: String,
-    isDeleted: { type: Boolean, default: false },
     isFamilyDoctor: {
         type: Boolean,
         default: false

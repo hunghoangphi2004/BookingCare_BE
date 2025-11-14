@@ -77,7 +77,7 @@ module.exports.createAllDoctorsSchedule = async () => {
 };
 module.exports.getSchedulesByDoctorAndDate = async (slug, date) => {
   const formattedDate = moment(date, ["DD-MM-YYYY", "DD/MM/YYYY"]).format("DD/MM/YYYY");
-  const doctor = await Doctor.findOne({ slug, isDeleted: false });
+  const doctor = await Doctor.findOne({ slug});
   if (!doctor) throw new AppError("Không tìm thấy bác sĩ với slug này", 404);
 
   const schedules = await Schedule.find({

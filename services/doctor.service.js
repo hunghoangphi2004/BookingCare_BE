@@ -10,7 +10,7 @@ const Appointment = require("../models/appointment.model");
 
 
 module.exports.getAllDoctor = async (role, userId, filters = {}, page = 1, limit = 10) => {
-    let find = { isDeleted: false };
+    let find = {};
 
     if (filters.specializationId) find.specializationId = filters.specializationId
     if (filters.clinicId) find.clinicId = filters.clinicId
@@ -24,12 +24,18 @@ module.exports.getAllDoctor = async (role, userId, filters = {}, page = 1, limit
 
 
     let doctors = await Doctor.find(find)
-        .populate({ path: 'userId', select: 'email role', })
+        .populate({
+            path: 'userId',
+            select: 'email role isDeleted',
+            match: { isDeleted: false }
+        })
         .populate({ path: 'clinicId', select: 'name address phone description image' })
         .populate({ path: 'specializationId', select: 'name description image' })
-        .skip(limit == 0 ? 0 : skip)
-        .limit(limit == 0 ? 0 : limit)
-        .lean()
+        .skip(limit === 0 ? 0 : skip)
+        .limit(limit === 0 ? 0 : limit)
+        .lean();
+
+    doctors = doctors.filter(d => d.userId);
 
     let total = await Doctor.countDocuments(find)
 
@@ -89,7 +95,6 @@ module.exports.getAllFamilyDoctors = async (filters = {}, page = 1, limit = 10) 
 module.exports.getDoctorBySlug = async (slug) => {
     let find = {
         slug: slug,
-        isDeleted: false
     };
 
     let doctor = await Doctor.findOne(find);
@@ -107,7 +112,6 @@ module.exports.getDoctorBySlug = async (slug) => {
 module.exports.getDoctorById = async (id) => {
     let find = {
         _id: id,
-        isDeleted: false
     };
 
     let doctor = await Doctor.findOne(find);
@@ -123,7 +127,7 @@ module.exports.getDoctorById = async (id) => {
 }
 
 module.exports.createDoctor = async (body) => {
-    const { email, name, password, thumbnail, phoneNumber, licenseNumber, experience, consultationFee, clinicId, specializationId } = body;
+    const { email, name, password, thumbnail, phoneNumber, licenseNumber, experience, consultationFee, clinicId, specializationId, isFamilyDoctor } = body;
     if (!email) {
         throw new AppError("Email là bắt buộc", 400);
     }
@@ -154,9 +158,9 @@ module.exports.createDoctor = async (body) => {
     newDoctor.consultationFee = consultationFee;
     newDoctor.phoneNumber = phoneNumber;
     newDoctor.thumbnail = thumbnail,
-        newDoctor.clinicId = clinicId;
+    newDoctor.clinicId = clinicId;
     newDoctor.specializationId = specializationId;
-    newDoctor.isDeleted = false;
+    newDoctor.isFamilyDoctor = !!isFamilyDoctor;
 
     await newDoctor.save();
     return { newUser, newDoctor }

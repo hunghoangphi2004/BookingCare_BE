@@ -122,6 +122,7 @@ module.exports.sendRegisterOTP = async (req, res) => {
 // controllers/auth.controller.js
 module.exports.register = async (req, res) => {
     try {
+        console.log(req.body)
         const { email, password, otp } = req.body;
 
         // Kiểm tra input
