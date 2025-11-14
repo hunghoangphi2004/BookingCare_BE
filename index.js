@@ -15,7 +15,7 @@ const port = process.env.PORT || 3000
 database.connect()
 const allowedOrigins = [
   "http://localhost:3006", // dev
-  "https://booking-care-fe-8k8u.vercel.app", 
+  "https://booking-care-fe-8k8u.vercel.app",
   "https://booking-care-fe-8k8u-git-main-hungs-projects-88cb76d9.vercel.app",
   "https://booking-care-fe-8k8u-8atzjrhua-hungs-projects-88cb76d9.vercel.app",
   "https://bookingcare-be-eh6u.onrender.com"
@@ -23,8 +23,18 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Cho phép request không có origin (Postman, server-side, Render internal)
-    if (!origin) return callback(null, true);
+    console.log("Request origin:", origin); // DEBUG: xem origin của request
+    if (!origin) {
+      // Cho phép request không có origin (ví dụ Postman hoặc server-side)
+      return callback(null, true);
+    }
+
+    const allowedOrigins = [
+      "http://localhost:3006",
+      "https://booking-care-fe-8k8u.vercel.app",
+      "https://booking-care-fe-8k8u-git-main-hungs-projects-88cb76d9.vercel.app",
+      "https://booking-care-fe-8k8u-8atzjrhua-hungs-projects-88cb76d9.vercel.app"
+    ];
 
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -34,8 +44,8 @@ app.use(cors({
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-}))
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"]
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
