@@ -9,11 +9,10 @@ const { sendEmail } = require("../utils/email.util");
 const moment = require("moment");
 
 module.exports.createAppointment = async (body,id) => {
-  const {doctorId, dateBooking, timeBooking, description } = body;
+  const {doctorId, dateBooking, timeBooking, description, images } = body;
 
   const user = await User.findOne({ _id: id }).select("email");
   const patient = await Patient.findOne({ userId: user._id });
-  console.log(user, patient)
 
 
   if (!doctorId) throw new AppError("Thiếu doctorId", 400);
@@ -62,6 +61,7 @@ module.exports.createAppointment = async (body,id) => {
     timeBooking,
     description,
     status: "pending",
+    images
   });
 
   await newAppointment.save();

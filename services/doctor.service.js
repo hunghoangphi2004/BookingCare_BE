@@ -9,9 +9,8 @@ const Family = require("../models/family.model");
 const Appointment = require("../models/appointment.model");
 
 
-module.exports.getAllDoctor = async (role, userId, filters = {}, page = 1, limit = 10) => {
+module.exports.getAllDoctor = async (filters = {}, page = 1, limit = 10) => {
     let find = {};
-
     if (filters.specializationId) find.specializationId = filters.specializationId
     if (filters.clinicId) find.clinicId = filters.clinicId
     if (filters.status) find.status = filters.status
@@ -24,24 +23,65 @@ module.exports.getAllDoctor = async (role, userId, filters = {}, page = 1, limit
 
 
     let doctors = await Doctor.find(find)
-        .populate({
-            path: 'userId',
-            select: 'email role isDeleted',
-            match: { isDeleted: false }
-        })
-        .populate({ path: 'clinicId', select: 'name address phone description image' })
-        .populate({ path: 'specializationId', select: 'name description image' })
-        .skip(limit === 0 ? 0 : skip)
-        .limit(limit === 0 ? 0 : limit)
-        .lean();
+    .populate({
+        path: 'userId',
+        select: 'email role isDeleted',
+        match: { isDeleted: false }
+    })
+    .populate({ path: 'clinicId', select: 'name address phone description image' })
+    .populate({ path: 'specializationId', select: 'name description image' })
+    .lean();
+    
+    doctors = doctors.filter(d => d.userId && !d.userId.isDeleted);
 
-    doctors = doctors.filter(d => d.userId);
+    // console.log(doctors)
 
-    let total = await Doctor.countDocuments(find)
-
+    let total = doctors.length;
+    const doctorsAfterFilter = doctors.slice(skip, skip + limit);
 
     return {
-        data: doctors,
+        data: doctorsAfterFilter,
+        pagination: {
+            total,
+            page,
+            limit,
+            totalPages: limit == 0 ? 1 : Math.ceil(total / limit)
+        }
+    }
+};
+
+module.exports.getAllFeaturedDoctor = async (filters = {}, page = 1, limit = 10) => {
+    let find = {isFeatured: true};
+    if (filters.specializationId) find.specializationId = filters.specializationId
+    if (filters.clinicId) find.clinicId = filters.clinicId
+    if (filters.status) find.status = filters.status
+    if (filters.keyword) find.name = { $regex: filters.keyword, $options: "i" };
+
+    page = Math.max(1, parseInt(page) || 1);
+    limit = Math.max(1, parseInt(limit) || 5);
+
+    const skip = (page - 1) * limit;
+
+
+    let doctors = await Doctor.find(find)
+    .populate({
+        path: 'userId',
+        select: 'email role isDeleted',
+        match: { isDeleted: false }
+    })
+    .populate({ path: 'clinicId', select: 'name address phone description image' })
+    .populate({ path: 'specializationId', select: 'name description image' })
+    .lean();
+    
+    doctors = doctors.filter(d => d.userId && !d.userId.isDeleted);
+
+    // console.log(doctors)
+
+    let total = doctors.length;
+    const doctorsAfterFilter = doctors.slice(skip, skip + limit);
+
+    return {
+        data: doctorsAfterFilter,
         pagination: {
             total,
             page,
@@ -127,7 +167,7 @@ module.exports.getDoctorById = async (id) => {
 }
 
 module.exports.createDoctor = async (body) => {
-    const { email, name, password, thumbnail, phoneNumber, licenseNumber, experience, consultationFee, clinicId, specializationId, isFamilyDoctor } = body;
+    const { email, name, password, isFeatured, thumbnail, phoneNumber, licenseNumber, experience, consultationFee, clinicId, specializationId, isFamilyDoctor } = body;
     if (!email) {
         throw new AppError("Email là bắt buộc", 400);
     }
@@ -158,7 +198,8 @@ module.exports.createDoctor = async (body) => {
     newDoctor.consultationFee = consultationFee;
     newDoctor.phoneNumber = phoneNumber;
     newDoctor.thumbnail = thumbnail,
-    newDoctor.clinicId = clinicId;
+        newDoctor.clinicId = clinicId;
+    newDoctor.isFeatured = !!isFeatured;
     newDoctor.specializationId = specializationId;
     newDoctor.isFamilyDoctor = !!isFamilyDoctor;
 
@@ -167,7 +208,7 @@ module.exports.createDoctor = async (body) => {
 }
 
 module.exports.editDoctor = async (doctorId, body, userRole, userId) => {
-    const { phoneNumber, name, licenseNumber, experience, consultationFee, clinicId, specializationId, password, thumbnail } = body;
+    const { phoneNumber, name, licenseNumber, experience, isFeatured,isFamilyDoctor, consultationFee, clinicId, specializationId, password, thumbnail } = body;
 
     if (!mongoose.Types.ObjectId.isValid(doctorId)) {
         throw new AppError("Id không hợp lệ", 400)
@@ -198,6 +239,8 @@ module.exports.editDoctor = async (doctorId, body, userRole, userId) => {
         if (clinicId) doctor.clinicId = clinicId;
         if (specializationId) doctor.specializationId = specializationId;
         if (thumbnail) doctor.thumbnail = thumbnail;
+        if (isFeatured !== undefined) doctor.isFeatured = isFeatured;
+        if (isFamilyDoctor !== undefined) doctor.isFamilyDoctor = isFamilyDoctor;
         if (password) {
             const user = await User.findById(doctor.userId);
             if (!user) throw new AppError("Không tìm thấy user liên kết", 404);
@@ -429,5 +472,63 @@ module.exports.getFamilyRequestsForDoctor = async (role, userId, filters = {}, p
             limit,
             totalPages: limit === 0 ? 1 : Math.ceil(total / limit)
         }
+    };
+};
+
+module.exports.getDoctorBySpecializationSlug = async (slug) => {
+    const spec = await Specialization.findOne({ slug, isDeleted: false });
+
+    if (!spec) throw new AppError("Không tìm thấy chuyên khoa", 404);
+
+    const doctors = await Doctor.find({
+        specializationId: spec._id
+    })
+        .select("name thumbnail experience consultationFee slug clinicId specializationId")
+        .populate({
+            path: "userId",
+            match: { isActive: true, isDeleted: false },
+            select: "email"
+        })
+        .populate({
+            path: "clinicId",
+            select: "name address"
+        })
+        .populate({
+            path: "specializationId",
+            select: "name"
+        });
+
+    return {
+        specialization: spec,
+        doctors: doctors.filter(doc => doc.userId !== null)
+    };
+};
+
+module.exports.getDoctorByClinicSlug = async (slug) => {
+    const clinic = await Clinic.findOne({ slug, isDeleted: false, isActive: true });
+
+    if (!clinic) throw new AppError("Không tìm phòng khám", 404);
+
+    const doctors = await Doctor.find({
+        clinicId: clinic._id
+    })
+        .select("name thumbnail experience consultationFee slug clinicId specializationId")
+        .populate({
+            path: "userId",
+            match: { isActive: true, isDeleted: false },
+            select: "email"
+        })
+        .populate({
+            path: "clinicId",
+            select: "name address openingHours "
+        })
+        .populate({
+            path: "specializationId",
+            select: "name"
+        });
+
+    return {
+        clinic: clinic,
+        doctors: doctors.filter(doc => doc.userId !== null)
     };
 };

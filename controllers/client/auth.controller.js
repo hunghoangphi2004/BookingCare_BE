@@ -10,6 +10,7 @@ const fs = require("fs");
 const { uploadToCloudinary } = require('../../utils/cloudinary.util.js')
 const Doctor = require("../../models/doctor.model.js")
 const Supporter = require("../../models/supporter.model.js")
+const patientService = require('../../services/patient.service.js')
 
 module.exports.getAllUsers = async (req, res) => {
     try {
@@ -237,7 +238,7 @@ module.exports.login = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        
+
         res.status(200).json({
             result: responseData,
             refreshToken: refreshToken,
@@ -384,7 +385,7 @@ module.exports.logout = async (req, res) => {
 module.exports.getProfile = async (req, res) => {
     try {
         console.log(req.user.id)
-        const user = await User.findById(req.user.id).select("email role");
+        const user = await User.findById(req.user.id).select("email role avatar");
         console.log(user)
 
         if (!user) {
@@ -442,6 +443,62 @@ module.exports.changeAvatar = async (req, res, next) => {
             success: true,
             message: "Cập nhật avatar thành công",
             user
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+module.exports.editProfile = async (req, res, next) => {
+    console.log(req.user.id)
+    console.log(req.body)
+    try {
+        // Lấy body từ multipart/form-data
+        const {
+            firstName,
+            lastName,
+            phoneNumber,
+            dateOfBirth,
+            gender,
+            address,
+            emergencyContact
+        } = req.body;
+
+        let imageUrl = null;
+
+        if (req.file) {
+            const result = await uploadToCloudinary(req.file.path, "patients");
+            imageUrl = result.secure_url;
+            fs.unlinkSync(req.file.path); // xóa sau khi upload
+        }
+
+        const updatedData = {
+            firstName,
+            lastName,
+            phoneNumber,
+            dateOfBirth,
+            gender,
+            address,
+            thumbnail: imageUrl || undefined, // chỉ lấy 1 lần
+            emergencyContact: {
+                name: emergencyContact?.name || req.body["emergencyContact[name]"] || "",
+                phone: emergencyContact?.phone || req.body["emergencyContact[phone]"] || "",
+                relationship: emergencyContact?.relationship || req.body["emergencyContact[relationship]"] || "",
+            }
+        };
+
+
+        // Lấy patient
+        const patient = await Patient.findOne({ userId: req.user.id });
+        if (!patient) return res.status(404).json({ message: "Patient not found", success: false });
+
+        // Cập nhật
+        const updatedPatient = await patientService.editPatient(patient._id, updatedData);
+
+        return res.status(200).json({
+            success: true,
+            message: "Cập nhật thông tin cá nhân thành công",
+            patient: updatedPatient,
         });
     } catch (err) {
         next(err);

@@ -20,7 +20,11 @@ const doctorSchema = new mongoose.Schema({
     },
     phoneNumber: String,
     licenseNumber: String,
-    experience: Number, // years
+    isFeatured: {
+        type: Boolean,
+        default: false
+    },
+    experience: Number, 
     consultationFee: Number,
     name: { type: String, required: true },
     slug: { type: String, slug: "name", unique: true },
@@ -29,7 +33,7 @@ const doctorSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-
+    city: String,
 }, {
     timestamps: true,
     strict: true

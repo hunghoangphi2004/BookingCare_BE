@@ -140,7 +140,6 @@ module.exports.editPatient = async (patientId, body, userId) => {
 
     await user.save();
     await patient.save();
-    console.log(user, patient)
 
     return {
       user,

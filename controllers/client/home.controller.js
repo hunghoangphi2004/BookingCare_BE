@@ -80,6 +80,17 @@ module.exports.getAllDoctor = async (req, res, next) => {
     }
 };
 
+module.exports.getAllFeaturedDoctors = async (req, res, next) => {
+    try {
+        const { page = 1, limit = 5, ...filters } = req.query;
+
+        const result = await doctorService.getAllFeaturedDoctor(filters, parseInt(page), parseInt(limit))
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        next(err)
+    }
+};
+
 module.exports.getAllFamilyDoctors = async (req, res, next) => {
   try {
     const { specializationId, clinicId, keyword, page, limit } = req.query;
@@ -115,3 +126,23 @@ module.exports.getDoctorById = async (req, res, next) => {
         next(err)
     }
 }
+
+module.exports.getDoctorBySpecialization = async (req, res, next) => {
+    try {
+        const slug = req.params.slug;
+        const result = await doctorService.getDoctorBySpecializationSlug(slug);
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        next(err)
+    }
+};
+
+module.exports.getDoctorByClinic = async (req, res, next) => {
+    try {
+        const slug = req.params.slug;
+        const result = await doctorService.getDoctorByClinicSlug(slug);
+        return res.json({ success: true, ...result });
+    } catch (err) {
+        next(err)
+    }
+};

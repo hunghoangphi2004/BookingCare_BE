@@ -7,7 +7,7 @@ module.exports.getAllDoctor = async (req, res, next) => {
     try {
         const { page = 1, limit = 5, ...filters } = req.query;
 
-        const result = await doctorService.getAllDoctor(req.user.role, req.user.id, filters, parseInt(page), parseInt(limit))
+        const result = await doctorService.getAllDoctor(filters, parseInt(page), parseInt(limit))
         return res.json({ success: true, ...result });
     } catch (err) {
         next(err)

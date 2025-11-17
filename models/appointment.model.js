@@ -4,30 +4,32 @@ const moment = require('moment')
 const Schedule = require("../models/schedule.model")
 
 const appointmentSchema = new mongoose.Schema({
-    doctorId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Doctor',
-        required: true
-    },
-    patientId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Patient',
-        required: true
-    },
-    status: {
-        type: String,
-        enum: ['pending', 'confirmed', 'completed', 'cancelled'],
-        default: 'pending'
-    },
-    dateBooking: { type: String, required: true },  // ví dụ: "2025-09-28"
-    timeBooking: { type: String, required: true },  // ví dụ: "09:00 - 09:30"
-    description: { type: String },                  // triệu chứng
-    isSentForms: { type: Boolean, default: false }, // đã gửi form chưa
-    isTakeCare: { type: Boolean, default: false },  // đang được chăm sóc sau khám chưa
-    isDeleted: { type: Boolean, default: false }
+  doctorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Doctor',
+    required: true
+  },
+  patientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Patient',
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'completed', 'cancelled'],
+    default: 'pending'
+  },
+  dateBooking: { type: String, required: true },
+  timeBooking: { type: String, required: true },
+  description: { type: String },
+  images: {
+    type: [String],
+    default: []
+  },
+  isDeleted: { type: Boolean, default: false }
 }, {
-    timestamps: true,
-    strict: true
+  timestamps: true,
+  strict: true
 });
 
 appointmentSchema.post('findOneAndUpdate', async function (doc) {
@@ -64,7 +66,7 @@ appointmentSchema.post('findOneAndUpdate', async function (doc) {
       );
 
       console.log("Đã hủy tất cả appointment pending cùng khung giờ");
-    } 
+    }
     else if (["cancelled", "completed"].includes(doc.status)) {
       schedule.sumBooking = Math.max(schedule.sumBooking - 1, 0);
       if (schedule.sumBooking < schedule.maxBooking) {

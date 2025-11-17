@@ -25,7 +25,7 @@ const allowedOrigins = [
 // CORS middleware chuẩn
 app.use(cors({
   origin: function (origin, callback) {
-    console.log("Request origin:", origin)
+    // console.log("Request origin:", origin)
     // Cho phép request không có origin (Postman, server-side)
     if (!origin) return callback(null, true)
     if (allowedOrigins.includes(origin)) return callback(null, true)

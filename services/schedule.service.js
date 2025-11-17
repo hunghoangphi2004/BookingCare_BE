@@ -35,8 +35,7 @@ module.exports.createAllDoctorsSchedule = async () => {
     }
 
     // Lấy tất cả bác sĩ
-    const doctors = await Doctor.find({ isDeleted: false }).select("_id");
-
+    const doctors = await Doctor.find().select("_id");
     if (!doctors || doctors.length === 0) {
       throw new AppError("Không có bác sĩ nào trong hệ thống", 404);
     }
