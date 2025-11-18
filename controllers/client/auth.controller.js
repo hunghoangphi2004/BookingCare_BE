@@ -450,8 +450,6 @@ module.exports.changeAvatar = async (req, res, next) => {
 };
 
 module.exports.editProfile = async (req, res, next) => {
-    console.log(req.user.id)
-    console.log(req.body)
     try {
         // Lấy body từ multipart/form-data
         const {

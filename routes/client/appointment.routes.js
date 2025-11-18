@@ -6,5 +6,6 @@ const streamifier = require('streamifier')
 const upload = require('../../middlewares/admin/uploadCloud.middleware')
 
 router.post('/create', upload.array('images', 5), appointmentController.createAppointment);
+router.get('/get-my-appointments', appointmentController.getAllAppointmentByUser);
 
 module.exports = router;

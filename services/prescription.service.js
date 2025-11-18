@@ -12,7 +12,7 @@ module.exports.getAllPrescription = async (filters = {}, page = 1, limit = 5) =>
     let find = { isDeleted: false };
 
     if (filters.userId) {
-        const doctor = await Doctor.findOne({isDeleted: false,userId: filters.userId})
+        const doctor = await Doctor.findOne({userId: filters.userId})
         find.doctorId = doctor._id
     }
 
@@ -93,7 +93,7 @@ module.exports.createPrescription = async (body) => {
         throw new AppError("Chẩn đoán là bắt buộc", 400);
     }
 
-    const doctor = await Doctor.findOne({ _id: doctorId, isDeleted: false });
+    const doctor = await Doctor.findOne({ _id: doctorId });
     if (!doctor) {
         throw new AppError("Không tìm thấy bác sĩ", 404);
     }

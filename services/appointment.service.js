@@ -98,6 +98,13 @@ module.exports.getAllAppointment = async () => {
   return appointment;
 }
 
+module.exports.getAllAppointmentByUser = async (userId) => {
+  const patient = await Patient.findOne({ userId });
+  if (!patient) throw new AppError("Không tìm thấy hồ sơ bệnh nhân", 404);
+  const appointment = await Appointment.find({ patientId: patient._id, isDeleted: false}).populate("doctorId").sort({ createdAt: -1 });
+  return appointment;
+}
+
 module.exports.changeStatusAppointment = async (id, status) => {
   if (!id) throw new AppError("Thiếu id appointment", 400);
   if (!status) throw new AppError("Thiếu status appointment", 400);

@@ -34,7 +34,7 @@ const familySchema = new mongoose.Schema({
             rejectedAt: Date,
             cancelledAt: Date,
             handledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' },
-            status: { type: String, enum: ['pending', 'approved', 'rejected', 'cancelled', 'inactive'], default: 'pending' },
+            status: { type: String, enum: ['pending', 'approved', 'rejected', 'cancelled'], default: 'pending' },
             rejectionReason: String,
             schedule: {
                 startDate: { type: Date },

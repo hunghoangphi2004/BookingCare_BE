@@ -26,3 +26,16 @@ module.exports.createAppointment = async(req, res, next) =>{
         next(err)
     }
 }
+
+module.exports.getAllAppointmentByUser = async(req, res, next) =>{
+    try{
+        const record = await appointmentService.getAllAppointmentByUser(req.user.id);
+        return res.status(200).json({
+            success: true,
+            message: "Lấy lịch hẹn thành công",
+            data: record
+        });
+    }catch(err){
+        next(err)
+    }
+}

@@ -78,7 +78,7 @@ module.exports.getMyAppointmentsByDoctor = async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
-      doctor: { id: doctor._id, name: doctor.name },
+      doctor: { id: doctor._id, name: doctor.name, thumbnail: doctor.thumbnail },
       scheduleWithPatients
     });
 
