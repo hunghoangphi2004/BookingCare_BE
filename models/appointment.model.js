@@ -1,4 +1,3 @@
-// models/appointment.model.js
 const mongoose = require('mongoose');
 const moment = require('moment')
 const Schedule = require("../models/schedule.model")
@@ -35,7 +34,6 @@ const appointmentSchema = new mongoose.Schema({
 appointmentSchema.post('findOneAndUpdate', async function (doc) {
   try {
     if (!doc) return;
-
     const date = moment(doc.dateBooking).format("DD/MM/YYYY");
     const time = doc.timeBooking.replace(/\s/g, "");
     const schedule = await Schedule.findOne({
@@ -43,12 +41,10 @@ appointmentSchema.post('findOneAndUpdate', async function (doc) {
       date,
       time
     });
-
     if (!schedule) {
-      console.warn("⚠️ Không tìm thấy Schedule tương ứng để cập nhật.");
+      console.warn("Không tìm thấy Schedule tương ứng để cập nhật.");
       return;
     }
-
     if (doc.status === "confirmed") {
       schedule.isBooked = true;
       schedule.sumBooking = Math.min(schedule.sumBooking + 1, schedule.maxBooking);

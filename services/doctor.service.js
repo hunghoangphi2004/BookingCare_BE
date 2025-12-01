@@ -444,7 +444,6 @@ module.exports.getFamilyRequestsForDoctor = async (role, userId, filters = {}, p
     console.log("familyDoctors của family:", families[0].familyDoctors);
     if (role === 'doctor') {
         families = families.map(family => {
-            // Lọc ra tất cả yêu cầu của bác sĩ này
             const doctorRequests = family.familyDoctors.filter(fd => {
                 const id = fd.doctorId?._id ? fd.doctorId._id.toString() : fd.doctorId?.toString();
                 return id === doctor._id.toString();

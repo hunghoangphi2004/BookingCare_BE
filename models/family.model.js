@@ -21,7 +21,7 @@ const familySchema = new mongoose.Schema({
             gender: { type: String, enum: ['male', 'female', 'other'], default: 'other' },
             phoneNumber: String,
             userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-            patientProfileId: { type: mongoose.Schema.Types.ObjectId, ref: 'PatientProfile', default: null }
+            patientProfileId: { type: mongoose.Schema.Types.ObjectId, ref: 'Patient', default: null }
         }
     ],
 

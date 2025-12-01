@@ -25,7 +25,7 @@ module.exports.createAppointment = async (body,id) => {
   }
 
   const doctor = await Doctor.findById(doctorId);
-  if (!doctor || doctor.isDeleted) {
+  if (!doctor) {
     throw new AppError("Không tìm thấy bác sĩ", 404);
   }
 
@@ -85,7 +85,7 @@ module.exports.createAppointment = async (body,id) => {
       "Yêu cầu đặt lịch của bạn đã được ghi nhận",
       `<p>Xin chào ${patient.firstName},</p>
        <p>Yêu cầu đặt lịch khám của bạn với bác sĩ <b>${doctor.name}</b> đã được ghi nhận.</p>
-       <p>Supporter của chúng tôi sẽ xem xét và gửi xác nhận sớm nhất qua email.</p>
+       <p>Hỗ trợ viên của chúng tôi sẽ xem xét và gửi xác nhận sớm nhất qua email.</p>
        <p>Vui lòng để ý hộp thư để biết kết quả đặt lịch.</p>`
     );
   }
