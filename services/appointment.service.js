@@ -109,7 +109,7 @@ module.exports.changeStatusAppointment = async (id, status) => {
   if (!id) throw new AppError("Thiếu id appointment", 400);
   if (!status) throw new AppError("Thiếu status appointment", 400);
 
-  const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+  const validStatuses = ['pending', 'confirmed', 'cancelled'];
   if (!validStatuses.includes(status)) {
     throw new AppError("status không hợp lệ", 400);
   }

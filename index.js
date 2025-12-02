@@ -15,10 +15,7 @@ database.connect()
 
 const allowedOrigins = [
   "http://localhost:3006",
-  "https://booking-care-fe-8k8u.vercel.app",
-  "https://booking-care-fe-8k8u-git-main-hungs-projects-88cb76d9.vercel.app",
-  "https://booking-care-fe-8k8u-8atzjrhua-hungs-projects-88cb76d9.vercel.app",
-  "https://bookingcare-be-eh6u.onrender.com"
+  "bookinghealth.vercel.app",
 ]
 
 app.use(cors({

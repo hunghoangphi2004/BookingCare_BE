@@ -4,8 +4,9 @@ const doctorController = require('../../controllers/admin/doctor.controller');
 const cloudinary = require('cloudinary').v2
 const streamifier = require('streamifier')
 const upload = require('../../middlewares/admin/uploadCloud.middleware')
+const allowedRoles = require("../../middlewares/admin/role.middleware")
 
-router.get('/get-all', doctorController.getAllDoctor);
+router.get('/get-all', allowedRoles("admin"), doctorController.getAllDoctor);
 
 router.post("/create", upload.single("thumbnail"), doctorController.createDoctor);
 

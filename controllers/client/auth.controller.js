@@ -102,7 +102,7 @@ module.exports.sendRegisterOTP = async (req, res) => {
             from: process.env.EMAIL_USER,
             to: email,
             subject: 'Verification',
-            html: `<p>Your OTP code is ${otp}</p>`
+            html: `<p>Mã OTP của bạn là ${otp}</p>`
         };
         transporter.sendMail(mailOptions, function (err, info) {
             if (err) {
@@ -113,7 +113,7 @@ module.exports.sendRegisterOTP = async (req, res) => {
             }
         });
 
-        res.status(200).json({ result: newOTP, message: 'register_otp send successfully', success: true })
+        res.status(200).json({ result: newOTP, message: 'Mã otp được gửi thành công', success: true })
     }
     catch (error) {
         res.status(404).json({ message: 'error in sendRegisterOTP - controllers/user.js', error, success: false })
@@ -127,9 +127,23 @@ module.exports.register = async (req, res) => {
         const { email, password, otp } = req.body;
 
         // Kiểm tra input
-        if (!email || !password || !otp) {
+        if (!email) {
             return res.status(400).json({
-                message: "Missing required fields",
+                message: "Thiếu email",
+                success: false
+            });
+        }
+
+        if (!password) {
+            return res.status(400).json({
+                message: "Thiếu mật khẩu",
+                success: false
+            });
+        }
+
+        if (!otp) {
+            return res.status(400).json({
+                message: "Thiếu otp",
                 success: false
             });
         }
@@ -172,7 +186,7 @@ module.exports.register = async (req, res) => {
         await newPatient.save();
 
         return res.status(201).json({
-            message: "User registered successfully",
+            message: "Đăng ký tài khoản thành công",
             user: newUser,
             Patient: newPatient,
             success: true
